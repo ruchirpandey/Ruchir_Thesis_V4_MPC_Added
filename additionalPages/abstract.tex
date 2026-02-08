@@ -1,0 +1,17 @@
+\begin{center}
+    % {\fontsize{18pt}{20pt}\selectfont \textbf{\underline{ABSTRACT}}}
+    {\fontsize{18 pt}{20 pt}\bookmanheading{\underline{ABSTRACT}}}
+
+% \bookmantitle{\textbf{{\underline{ABSTRACT}}}}
+\end{center}
+\addcontentsline{toc}{section}{ABSTRACT}
+ % \setmainfont{Times New Roman}
+The integration of solar photovoltaic (PV) systems with doubly-fed induction generator (DFIG) wind turbines presents significant control challenges due to tightly coupled nonlinear dynamics, intermittent renewable resources, and stringent grid code requirements. This thesis addresses these challenges through advanced deep reinforcement learning control strategies, specifically investigating Twin-Delayed Deep Deterministic Policy Gradient (TD3) and Deep Deterministic Policy Gradient (DDPG) algorithms for unified power optimization in hybrid DFIG-Solar PV energy systems.
+
+A comprehensive unified control framework is developed featuring an 11-dimensional state space capturing complete system observability, a 4-dimensional continuous action space for rotor-side and grid-side converter control, and a multi-objective reward function balancing frequency tracking, power regulation, DC link voltage stability, and reactive power management. The TD3 algorithm incorporates three key innovations---clipped double Q-learning to mitigate value overestimation bias, delayed policy updates for enhanced training stability, and target policy smoothing for improved robustness---addressing fundamental limitations of conventional DDPG approaches.
+
+Extensive Hardware-in-Loop (HIL) validation on the OPAL-RT OP5700 real-time simulator demonstrates superior performance compared to classical PI control and baseline DDPG implementations. Experimental results reveal that TD3 achieves 15.3\% faster response time (72 ms vs 85 ms), 10.3\% reduced power overshoot (7.0\% vs 7.8\%), 8\% improved DC link voltage regulation ($\pm$4.6\% vs $\pm$5\%), and 16.9\% faster settling time (98 ms vs 118 ms) compared to conventional PI controllers. Comparative analysis reveals that while DDPG excels in specific metrics through aggressive optimization, TD3 delivers more balanced multi-objective performance with 30\% lower variance across diverse operating conditions.
+
+Critical discussion identifies key trade-offs between training complexity and deployment performance, demonstrating that TD3's 40\% increased training overhead (12 hours vs 8 hours for DDPG) translates to zero additional deployment cost with superior operational reliability. The model-free nature of deep reinforcement learning enables adaptive control without requiring accurate system models, while learned policies generalize effectively across wind speeds from 6 to 14 m/s and solar irradiance from 200 to 1000 W/m$^2$.
+
+This research makes several novel contributions: first application of TD3 to integrated DFIG-PV hybrid systems, comprehensive DDPG-TD3 comparative analysis under identical conditions, unified controller design managing coupled RSC-GSC-PV dynamics, and rigorous HIL validation demonstrating industrial feasibility. The work advances the state-of-the-art in intelligent renewable energy control while providing practical guidelines for deploying deep reinforcement learning in grid-connected power systems.

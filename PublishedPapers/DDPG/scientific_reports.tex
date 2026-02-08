@@ -1,0 +1,688 @@
+\documentclass[fleqn,10pt,hidelinks]{wlscirep}
+
+%%% Essential Packages
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+%%% Fonts
+\usepackage{newtxtext,newtxmath}
+
+%%% Graphics
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{circuitikz}
+\usetikzlibrary{shapes, arrows.meta, positioning}
+\usepackage{subcaption}
+\usepackage{epstopdf}
+
+%%% Tables
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multirow}
+% \usepackage[table,xcdraw]{xcolor}
+\usepackage{colortbl}
+
+%%% Math & Algorithms
+\usepackage{siunitx}
+\usepackage{algorithmic}
+\usepackage{bm}
+
+%%% References & Links
+\usepackage{cite}
+\usepackage{url}
+
+%%% Layout
+\usepackage{float}
+\usepackage{stfloats}
+\usepackage{balance}
+\usepackage{flushend}
+
+%%% List Environments
+\usepackage{enumitem}
+
+%%% Colors
+\definecolor{GoldenTainoi}{rgb}{1.0, 0.87, 0.68}
+\definecolor{HawkesBlue}{rgb}{0.8, 0.92, 1.0}
+
+%%% Miscellaneous
+\usepackage{pifont}
+\usepackage{verbatim}
+\usepackage{lipsum}
+\usepackage{academicons}
+
+%%% Hyperref should be loaded last
+\usepackage{hyperref} % Options already passed via documentclass
+
+%%% List Environments
+\usepackage{enumitem} % Better alternative to enumerate package
+
+%%% Colors
+\definecolor{GoldenTainoi}{rgb}{1.0, 0.87, 0.68}
+\definecolor{HawkesBlue}{rgb}{0.8, 0.92, 1.0}
+\definecolor{limegreen}{rgb}{0.2, 0.8, 0.2}
+\definecolor{forestgreen}{rgb}{0.13, 0.55, 0.13}
+\definecolor{greenhtml}{rgb}{0.0, 0.5, 0.0}
+
+%%% Miscellaneous
+\usepackage{pifont}
+\usepackage{verbatim}
+\usepackage{lipsum}
+\usepackage{academicons}
+
+\definecolor{GoldenTainoi}{rgb}{1.0, 0.87, 0.68}
+\definecolor{HawkesBlue}{rgb}{0.8, 0.92, 1.0}
+\definecolor{limegreen}{rgb}{0.2, 0.8, 0.2}
+\definecolor{forestgreen}{rgb}{0.13, 0.55, 0.13}
+\definecolor{greenhtml}{rgb}{0.0, 0.5, 0.0}
+
+\title{DDPG Algorithm for Power Optimization and Control of Solar PV-Integrated DFIG Wind Energy Systems}
+
+\author[1,*]{Ruchir Pandey}
+\author[1]{Sourav Bose}
+\author[1,+]{Prakash Dwivedi}
+\affil[1]{Department of Electrical Engineering, National Institute of Technology Uttarakhand, Srinagar Garhwal, 246174, India}
+
+\affil[*]{ruchirpandey.phd19@nituk.ac.in}
+\affil[+]{Senior Member, IEEE}
+
+\begin{abstract}
+In modern power systems, the integration of multiple renewable energy sources pose significant challenges for system control and optimization. This paper presents a novel approach using Deep Deterministic Policy Gradient (DDPG) algorithm for controlling a solar PV-integrated Doubly Fed Induction Generator (DFIG) wind energy system. Unlike conventional PI controllers, the proposed DDPG-based control strategy provides an adaptive learning capabilities and improved dynamic performance. The control system is implemented on both Rotor Side Converter (RSC) and Grid Side Converter (GSC) with solar PV integration at the DC link. Simulation results demonstrate superior performance in terms of power quality, dynamic response, and system stability compared to conventional PI control methods. The proposed system achieves an overall improvement in annual energy production, better control stability, and enhanced fault ride-through capability.
+\end{abstract}
+
+\begin{document}
+
+\flushbottom
+\maketitle
+\thispagestyle{empty}
+
+\noindent \textbf{Keywords:} DFIG wind system, solar PV integration, deep deterministic policy gradient, renewable energy control, power optimization, machine learning
+
+\section*{Nomenclature}
+\begin{description}
+\item[$R_s, R_r$] Stator and rotor resistances
+\item[$L_s, L_r$] Stator and rotor inductances
+\item[$L_m$] Mutual inductance
+\item[$L'_s$] Transient stator inductance
+\item[$\omega_r$] Rotor angular frequency
+\item[$\omega_s$] Synchronous angular frequency
+\item[$\omega_b$] Base angular frequency
+\item[$P_s, Q_s$] Stator active and reactive power
+\item[$P_g, Q_g$] Grid active and reactive power
+\item[$\theta_r$] Rotor angle
+\item[$e'_{qs}, e'_{ds}$] Transient stator voltages
+\item[$T_r$] Rotor time constant
+\item[$R_1$] Combined resistance parameter
+\item[$I, V$] PV output current and voltage
+\item[$I_{ph}$] Photocurrent
+\item[$I_s$] Reverse saturation current
+\item[$R_s$] Series resistance (PV)
+\item[$R_p$] Parallel resistance (PV)
+\item[$n_s$] Number of series cells
+\item[$V_t$] Thermal voltage
+\item[$i_{pv}$] PV current to DC link
+\item[$P_{pv}$] PV power output
+\item[$v_{dc}$] DC link voltage
+\item[$i_{r,dc}$] Rotor side converter DC current
+\item[$i_{g,dc}$] Grid side converter DC current
+\item[$v_{gd}, v_{gq}$] Grid $d$ and $q$-axis voltages
+\item[$i_{gd}, i_{gq}$] Grid $d$ and $q$-axis currents
+\item[$v_w$] Wind speed
+\item[$\theta_{\mu}$] Actor network parameters
+\item[$\theta_Q$] Critic network parameters
+\item[$r_{RSC}$] RSC reward component
+\item[$r_{GSC}$] GSC reward component
+\item[${W}_n, {b}_n$] Neural network weights and biases
+\end{description}
+
+\section*{Introduction}
+
+The electricity generation landscape is rapidly evolving with increasing penetration of renewable energy sources. Wind energy, particularly through DFIG-based systems, has emerged as a leading renewable technology. However, the intermittent nature of wind power and the need for stable grid integration present significant control challenges. Traditional control methods, primarily based on PI controllers, often struggle to handle system nonlinearities and varying operating conditions effectively \cite{Wu2019, Song2015}.
+
+Recently, with the development of smart grids and micro-grids, doubly-fed induction generator-based wind turbines (DFIG-WTs) have been increasingly being integrated with solar photovoltaic (PV) systems. Such hybrid systems have transformed renewable energy integration, offering enhanced grid support capabilities and improved system efficiency \cite{Tiwari2018, Kumar2020}. These integrated systems have found widespread applications across multiple domains, from multi-microgrids to prosumers in smart grids, from renewable sources to distributed generations in market-driven microgrids \cite{Yue2019, Zafar2018, Gao2018, Hong2018}.
+
+The integrated DFIG-WT and solar-PV systems provide several critical contributions to connected power grids. Regarding enhanced grid support capabilities, these integrated systems provide superior voltage regulation, enhanced reactive power management, and improved frequency stabilization achieved through coordinated control strategies \cite{Bhattacharyya2022}.
+
+From a system integration perspective, the combined approach enables elimination of separate converters for PV integration, reduces component count and system complexity, improves overall system efficiency, and enables better utilization of existing infrastructure while enhancing reliability through resource complementarity. The control strategies for such integrated systems can be broadly categorized into conventional analytic algorithms and artificial intelligent algorithms. Among conventional approaches, proportional-integral-derivative (PID) controllers are widely used but suffer from limited adaptability and fixed performance after parameter optimization \cite{Linares-Flores2015, Yao2016}.
+
+Artificial intelligence-based algorithms have shown significant promise in addressing the limitations of conventional approaches. Traditional reinforcement learning enables online strategy updates and adaptability to uncertain environments, but remains limited by discrete action spaces. Deep Belief Networks (DBNs) offer strong pattern recognition capabilities and effective feature extraction but face limitations in real-time control applications \cite{ref6}. Advanced deep learning methods provide improved learning capabilities and better handling of complex systems, though they must address computational intensity challenges \cite{ref6}.
+
+These traditional approaches face significant challenges in control system implementation, integration, and operation. Control system limitations include fixed control parameters after optimisation, limited adaptation to system changes, complex tuning requirements, and poor handling of system nonlinearities. Operational issues include the variable nature of renewable resources, system parameter uncertainties, grid disturbances and faults, and multiple operating mode transitions \cite{ref7}.
+
+To address these limitations while maintaining the advantages of both conventional and intelligent control approaches, this paper proposes a novel deep deterministic policy gradient (DDPG)-based control strategy for solar PV integrated DFIG-WT systems \cite{ref6}. The DDPG approach offers advanced control capabilities through continuous action space handling, end-to-end learning from states to actions, and improved coordination between subsystems \cite{ref6}. This results in enhanced system performance through optimal power extraction from both sources and better DC link voltage stability.
+
+Although prior work has successfully applied DRL to standalone DFIG systems, the results presented in this study confirm that a single unified DDPG based controller can effectively manage the complex and coupled dynamics of a hybrid DFIG-PV system integrated at the DC link. This approach successfully trains the controller to manage not only grid-side power flow and rotor-side power extraction but also to stabilize the DC-link voltage against simultaneous fluctuations from two highly intermittent renewable sources.Comprehensive performance validation is conducted through detailed simulation studies, experimental verification, and comparative analysis with conventional methods under real-world scenarios.
+
+\section*{System Configuration and Modeling}
+
+\subsection*{System Architecture}
+
+The proposed system comprises a DFIG-based wind energy system integrated with a solar PV array at the DC link between RSC and GSC. Figure \ref{system_config} shows the overall system topology where conventional PI controllers for RSC and GSC are replaced by the DDPG-based controller.
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=\textwidth]{images/Updated_DFIG_Topology.png}}
+\caption{DDPG based Grid Side converter and Rotor Side converter control}
+\label{system_config}
+\end{figure}
+\subsection*{DFIG System Mathematical Model}
+The DFIG system equations in the synchronously rotating d-q reference frame are well established in literature \cite{Zhang2021, Wang2015} and can be expressed as:
+
+\begin{equation}
+V_{qs} = R_s i_{qs} + \frac{d\psi_{qs}}{dt} + \omega_s\psi_{ds}
+\label{eq:stator_voltage1}
+\end{equation}
+
+\begin{equation}
+V_{ds} = R_s i_{ds} + \frac{d\psi_{ds}}{dt} - \omega_s\psi_{qs}
+\label{eq:stator_voltage2}
+\end{equation}
+
+\begin{equation}
+V_{qr} = R_r i_{qr} + \frac{d\psi_{qr}}{dt} + (\omega_s-\omega_r)\psi_{dr}
+\label{eq:rotor_voltage1}
+\end{equation}
+
+\begin{equation}
+V_{dr} = R_r i_{dr} + \frac{d\psi_{dr}}{dt} - (\omega_s-\omega_r)\psi_{qr}
+\label{eq:rotor_voltage2}
+\end{equation}
+
+where $V$, $i$, $\psi$ represent voltage, current, and flux respectively; subscripts $s$ and $r$ denote stator and rotor; $d$ and $q$ represent direct and quadrature axes components. These equations have been extensively validated for wind energy systems \cite{Hu2019} and form the foundation for advanced control strategies in renewable energy integration.
+
+The solar PV array is modeled using the single diode equivalent circuit \cite{Shuai2021, Yang2021}, with the current-voltage relationship expressed as:
+
+\begin{equation}
+I = I_{ph} - I_s(e^{\frac{V+IR_s}{n_sV_t}} - 1) - \frac{V + IR_s}{R_p}
+\label{eq:pv_model}
+\end{equation}
+
+This model has been shown to accurately represent PV system characteristics across varying irradiance and temperature conditions \cite{Kumar2020}.
+
+\subsection*{DDPG Environment Modelling}
+
+The DDPG algorithm combines actor-critic architecture with deterministic policy gradient for continuous action spaces. The control structure consists of:
+
+\subsubsection*{System State Space}
+The complete state vector $\mathbf{s} \in \mathbb{R}^n$ is defined as:
+
+\begin{equation}
+\mathbf{s} = \begin{bmatrix} 
+i_{qs} \; i_{ds} \; i_{qr} \; i_{dr} \; v_{dc} \; i_{pv} \; P_s \; Q_s \; P_g \; Q_g \; \theta_r
+\end{bmatrix}^T
+\label{eq:State_Vector}
+\end{equation}
+
+\subsubsection*{Action Space}
+The actor network that takes the state as input and outputs the continuous action values, and the critic network that takes the state-action pair as input and estimates the corresponding action-value. The control action vector $\mathbf{a} \in \mathbb{R}^m$ is:
+
+\begin{equation}
+\mathbf{a} = \begin{bmatrix}
+v_{qr} & v_{dr} & v_{qg} & v_{dg}
+\end{bmatrix}^T
+\label{eq:Action_Vector}
+\end{equation}
+
+\subsubsection*{System Dynamics}
+The environment evolution follows the nonlinear differential equations \cite{Wang2015}:
+\begin{equation}
+\dot{\mathbf{s}} = f(\mathbf{s}, \mathbf{a}) = [\dot{i}_{qs}, \dot{i}_{ds}, \dot{i}_{qr}, \dot{i}_{dr}, \dot{\omega}_r, \dot{v}_{dc}, \dot{i}_{pv}, \dot{P}_s, \dot{Q}_s, \dot{P}_g, \dot{Q}_g, \dot{\theta}_r]^T
+\end{equation}
+
+Where the individual components are:
+
+\begin{align}
+\dot{i}_{qs} &= \frac{\omega_b}{L'_s}\bigg(-R_1i_{qs} + \omega_sL'_si_{ds} + \frac{\omega_r}{\omega_s}e'_{qs} \nonumber\\
+&\quad - \frac{1}{T_r\omega_s}e'_{ds} - v_{qs} + \frac{L_m}{L_{rr}}v_{qr}\bigg) \label{eq:iqs_dot} \\
+\dot{i}_{ds} &= \frac{\omega_b}{L'_s}\bigg(-\omega_sL'_si_{qs} - R_1i_{ds} + \frac{1}{T_r\omega_s}e'_{qs} \nonumber\\
+&\quad + \frac{\omega_r}{\omega_s}e'_{ds} - v_{ds} + \frac{L_m}{L_{rr}}v_{dr}\bigg) \label{eq:ids_dot} \\
+\dot{\omega}_r &= \frac{1}{J}(T_m - T_e - B\omega_r) \label{eq:wr_dot} \\
+\dot{v}_{dc} &= \frac{1}{C}(i_{pv} + i_{r,dc} - i_{g,dc}) \label{eq:vdc_dot}
+\end{align}
+
+\subsubsection*{Actor and Critic Network}
+
+The deterministic policy mapping $\mu: \mathbf{S} \rightarrow \mathbf{A}$ is parameterized as :
+
+\begin{equation}
+\mu(\mathbf{s}|\theta_\mu) = \tanh(\mathbf{W}_n \sigma(\mathbf{W}_{n-1}...\sigma(\mathbf{W}_1\mathbf{s} + \mathbf{b}_1)... + \mathbf{b}_{n-1}) + \mathbf{b}_n)
+\label{eq:Actor_Network}
+\end{equation}
+
+The action-value function $Q: \mathbf{S} \times \mathbf{A} \rightarrow \mathbb{R}$ is approximated as:
+
+\begin{equation}
+Q(\mathbf{s},\mathbf{a}|\theta_Q) = \mathbf{W}'_n \sigma(\mathbf{W}'_{n-1}...\sigma(\mathbf{W}'_1[\mathbf{s},\mathbf{a}] + \mathbf{b}'_1)... + \mathbf{b}'_{n-1}) + \mathbf{b}'_n
+\label{eq:Critic_Network}
+\end{equation}
+
+\subsubsection*{Policy Gradient}
+
+\begin{equation}
+\nabla_{\theta_\mu}J = \frac{1}{N} \sum_{i=1}^N \nabla_a Q(s,a|\theta_Q)|_{a=\mu(s)} \nabla_{\theta_\mu}\mu(s|\theta_\mu)
+\label{eq:policy_gradient}
+\end{equation}
+
+\subsubsection*{Experience Replay and Target Networks}
+
+\begin{align}
+\text{Experience Buffer: } \mathcal{B} &= \{(s_t,a_t,r_t,s_{t+1})\}_{t=1:T} \label{eq:experience_buffer} \\
+\text{Target Networks Update: } \theta_Q' &= \tau\theta_Q + (1-\tau)\theta_Q' \label{eq:target_update1} \\
+\theta_\mu' &= \tau\theta_\mu + (1-\tau)\theta_\mu' \label{eq:target_update2}
+\end{align}
+
+\subsubsection*{Reward Functions}
+\begin{align}
+r_{RSC} = -(w_1(\omega_r - \omega_r^*)^2 + w_2(P_s - P_s^*)^2 + w_3(Q_s - Q_s^*)^2) \label{eq:rsc_reward} \\
+r_{GSC} = -(w_4(v_{dc} - v_{dc}^*)^2 + w_5(P_g - P_g^*)^2 + w_6(Q_g - Q_g^*)^2) \label{eq:gsc_reward} \\
+r = r_{RSC} + r_{GSC}  \label{eq:total_reward}
+\end{align}
+Implementing the reward function is a two-step process, where initial weights are found based on the choice to prioritise power and stability. Since these weight values could not be tuned iteratively during the training process due to extreme computational complexities, the curriculum learning strategy was used to help the agent achieve this complex goal more efficiently. It does not find the optimal weights itself; rather, it guides the agent through a sequence of progressively simpler tasks by learning the sophisticated policy for pre-determined reward function.
+\begin{table}[htbp]
+\centering
+\caption{Reward Function Weighting Factors}
+\label{tab:reward_weights}
+\begin{tabular}{|l|c|}
+\hline
+\rowcolor{gray!10}
+\textbf{Objective} & \textbf{Weight} \\ \hline
+Frequency tracking ($w_1$) & 0.4 \\ \hline
+Rotor Active Power tracking ($w_2$) & 0.3 \\ \hline
+Rotor Reactive Power tracking ($w_3$) & 0.3 \\ \hline
+DC link voltage ($w_4$) & 0.3 \\ \hline
+Grid Side Active Power tracking ($w_5$) & 0.2 \\ \hline
+Grid Side Reactive Power tracking ($w_6$) & 0.2 \\ \hline
+\end{tabular}
+\end{table}
+\section*{Methods}
+
+\subsection*{Deep Deterministic Policy Gradient Control Strategy and Implementation}
+
+The DDPG implementation, including the control environment, actor-critic neural network and reward function design, was developed and trained using Python TensorFlow and Keras libraries. The training process was executed on Google Colab's NVIDIA T4 GPU runtime environment, utilizing specified reward function weights and hyperparameters for learning and training.
+
+The state-action space formulation follows the approach suggested in recent literature on reinforcement learning applications in power systems \cite{Chen2021, Yang2020}, but is specifically tailored for the DFIG-solar PV integration scenario. The complete state vector includes parameters from both the DFIG and solar PV systems to enable coordinated control.
+
+\subsubsection*{RSC Control Environment}
+\begin{itemize}
+\item RSC Control: $[i_{rd}, i_{rq}, i_{sd}, i_{sq}, \omega_r, v_w, V_{dc}, I_{pv}]$
+\item State observation: 8-dimensional state vector
+\item Action computation: 2-dimensional control signal $[V_{rd}, V_{rq}]$
+\item Reward calculation: As per equation (\ref{eq:total_reward}) based on power tracking accuracy
+\end{itemize}
+
+\subsubsection*{GSC Control Environment}
+\begin{itemize}
+\item GSC Control: $[i_{gd}, i_{gq}, V_{dc}, v_{gd}, v_{gq}, P_{pv}]$
+\item State observation: 6-dimensional state vector
+\item Action computation: 2-dimensional control signal $[V_{gd}, V_{gq}]$
+\item Reward calculation: As per equation (\ref{eq:total_reward}) based on DC link stability
+\end{itemize}
+
+\subsubsection*{Reward Function Design}
+The multi-objective reward function is designed to optimize both power tracking accuracy and DC link stability, similar to approaches used in \cite{Du2020} but extended to account for the integrated solar PV system. This formulation enables the DDPG algorithm to learn control policies that balance multiple performance objectives simultaneously. The function of $\omega_{r}$, $P_{s}$ and $Q_{s}$ and reward function for GSC has been defined as a function of $V_{dc}$, $P_{g}$ and $Q_{g}$. The overall reward for training is obtained by summing up rewards for RSC and GSC as in equations (\ref{eq:total_reward}).
+
+\subsubsection*{Actor Network}
+The actor network architecture is inspired by successful implementations in power system control applications \cite{Wu2024, Yan2021}, with modifications to address the specific requirements of the integrated DFIG-PV system. The network is designed to capture the complex nonlinear relationships between system states and optimal control actions. The actor network takes the 11-dimensional state vector (equation (\ref{eq:State_Vector})) as input and through multiple neural network layers, produces a 4-dimensional control action vector (equation (\ref{eq:Action_Vector})). The actor network uses ReLU activation functions internally to capture nonlinear relationships, while the final tanh activation ensures the output voltages stay within bounds.
+
+
+\subsubsection*{Critic Network}
+The critic network evaluates the actions selected by the actor network, providing feedback that drives the learning process. This approach has demonstrated superior performance in renewable energy control applications \cite{Yang2020, Mbuwir2017} by enabling more effective policy updates compared to traditional reinforcement learning methods. The critic network takes both the 11-dimensional state vector and the 4-dimensional action vector as input. It evaluates how good these control actions are for the given state by assessing:
+\begin{itemize}
+    \item How well the RSC voltages achieve rotor current control based on stator currents and internal voltages 
+    \item How well the RSC voltages achieve power control based on $P_s$, $Q_s$ measurements
+    \item How well the GSC voltages maintain DC link voltage regulation using $V_{dc}$
+\end{itemize}
+
+The critic network produces a scalar value indicating the quality of the selected control actions for the current state, helping train the actor network to improve its control policy.
+The actor-critic interaction for the learning mechanism has been depicted in figure \ref{fig:Actor-Critic Network}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.5\textwidth]{images/Actor_Critic_Diagram.png}
+\caption{Actor Critic Network Diagram}
+\label{fig:Actor-Critic Network}
+\end{figure}
+\subsubsection*{Hyperparameters}
+The Deep Deterministic Policy Gradient (DDPG) architecture employs two specialised neural networks with configurations detailed in Table~\ref{tab:nn_arch}. The Actor Network generates control actions, beginning with an input layer that processes an 11-dimensional state vector representing real-time system measurements (including stator currents, rotor speeds, and DC link voltage). This network architecture enables.
+
+The learning process was configured with parameters from Table~\ref{tab:learning_params}, including:
+\begin{itemize}
+    \item A near-unity discount factor ($\gamma=0.99$) for long-term reward consideration
+    \item Differential learning rates ($10^{-4}$ for actor vs $10^{-3}$ for critic)
+    \item Conservative target network updates ($\tau=0.001$)
+\end{itemize}
+
+As shown in Table~\ref{tab:reward_weights}, the reward function combines multiple objectives with:
+\begin{itemize}
+    \item 40\% weight on power tracking accuracy
+    \item 30\% weight on DC link stability
+    \item 20\% weight on reactive power control
+\end{itemize}
+
+The training regimen (Table~\ref{tab:training_schedule}) consisted of:
+\begin{itemize}
+    \item 2000 episodes of 1000 steps each
+    \item 1000-step warmup phase for experience accumulation
+    \item Exploration rate decaying from 100\% to 10\% 
+\end{itemize}
+
+\begin{table}[htbp]
+\centering
+\caption{Neural Network Architecture}
+\label{tab:nn_arch}
+\begin{tabular}{|l|l|}
+\hline
+\multicolumn{2}{|c|}{\textbf{Actor Network}} \\ \hline
+Input layer & State input (11 states) \\ \hline
+Hidden layers & [400, 300] neurons with ReLU activation \\ \hline
+Output layer & 4 actions (RSC and GSC control signals) with tanh activation \\ \hline
+\multicolumn{2}{|c|}{\textbf{Critic Network}} \\ \hline
+State input & 11 dimensions \\ \hline
+Action input & 4 dimensions \\ \hline
+Hidden layers & [400, 300] with ReLU activation \\ \hline
+Output layer & 1 (Q-value) with linear activation \\ \hline
+\end{tabular}
+\end{table}
+
+The DDPG agent was trained over 2000 episodes, with the cumulative reward per episode showing a steady increase as the agent learned an effective control policy. The policy converged to a stable and high-performing solution after approximately 1500 episodes. The total training process took about 8 hours to complete.
+\begin{table}[htbp]
+\centering
+\caption{Deep Reinforcement Learning Parameters}
+\label{tab:learning_params}
+\begin{tabular}{|l|c|}
+\hline
+\rowcolor{gray!10}
+\textbf{Parameter} & \textbf{Value} \\ \hline
+Discount factor ($\gamma$) & 0.99 \\ \hline
+Actor learning rate & $1\times10^{-4}$ \\ \hline
+Critic learning rate & $1\times10^{-3}$ \\ \hline
+Target update rate ($\tau$) & 0.001 \\ \hline
+Batch size & 64 \\ \hline
+Replay buffer size & $1\times10^6$ \\ \hline
+\multicolumn{2}{|l|}{Exploration: Ornstein-Uhlenbeck process} \\ 
+\multicolumn{2}{|l|}{\quad $\nu=0.0$, $\theta=0.15$, $\sigma=0.2$} \\ \hline
+\end{tabular}
+\end{table}
+
+
+
+\begin{table}[htbp]
+\centering
+\caption{Training Schedule Configuration}
+\label{tab:training_schedule}
+\begin{tabular}{|l|c|}
+\hline
+\rowcolor{gray!10}
+\textbf{Parameter} & \textbf{Value} \\ \hline
+Training episodes & 2000 \\ \hline
+Steps per episode & 1000 \\ \hline
+Warmup steps & 1000 \\ \hline
+Minimum exploration rate & 0.1 \\ \hline
+Exploration decay rate & 0.995 \\ \hline
+\end{tabular}
+\end{table}
+
+\section*{Simulation and Experimental Results}
+
+The trained DDPG model's weights and biases were exported to MAT file format. These parameters were then integrated into Simulink through custom function blocks that implemented ReLU activation functions, effectively recreating the neural network architecture. The traditional PI controller was substituted with these custom function blocks to serve as the control system. The complete integrated model was deployed on the OPAL-RT real-time HIL platform to control the DFIG-PV system.
+
+\subsection*{Simulation Parameters}
+The simulation was carried out using the simulation parameters in Table \ref{tab:sim_params}:
+\begin{table}[htbp]
+\centering
+\caption{System Simulation Parameters}
+\label{tab:sim_params}
+\begin{tabular}{|l|c|l|}
+\hline
+\multicolumn{1}{|c|}{\textbf{Parameter}} & \textbf{Value} & \multicolumn{1}{c|}{\textbf{Unit}} \\ \hline
+Sampling time & 1 & ms \\ \hline
+Wind speed range & [6-14] & m/s \\ \hline
+Solar irradiance range & [200-1000] & W/m² \\ \hline
+DC link voltage reference & 1200 & V \\ \hline
+Maximum power point tracking interval & 100 & ms \\ \hline
+DFIG Power Output & 7.5 & kW \\ \hline
+Stator Phase Voltage & 415 & V \\ \hline
+Stator Current & 8 & A \\ \hline
+Rotor Current & 12 & A \\ \hline
+DC Link voltage & 230 & V \\ \hline
+Wind Speed (nominal) & 9 & m/s \\ \hline
+Solar PV Rated Output & 500 & W \\ \hline
+Solar PV Open Circuit Voltage (Voc) & 108 & V \\ \hline
+Solar PV Rated Current & 5 & A \\ \hline
+Converter Filter Capacitor & 1000 & uF \\ \hline
+Converter Filter Inductor & 5 & mH \\ \hline
+\end{tabular}
+\end{table}
+The system response was tested under dynamic solar PV current and wind speed variations (Fig.~\ref{fig:Solar Power Variation}). The experiment executed changes in two  steps:
+\begin{enumerate}
+    \item Solar PV current variations
+
+\begin{itemize}
+    \item 0→30A at t=5s
+\end{itemize}
+
+    \item Wind Speed variations
+
+\begin{itemize}
+    \item {10→11.2} ${ ms^{-1}}$ at t=5s
+\end{itemize}
+
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{Used Run4 Results/Run4_M1_Solar.jpg}
+\caption{Change in solar PV input and $V_{dc}$}
+\label{fig:Solar Power Variation}
+\end{figure}
+
+Key observations from Fig.~\ref{fig:Solar Power Variation}:
+\begin{itemize}
+    \item[\textbf{1.}] DC link voltage ($V_{dc}$) maintains ±1\% regulation
+    \item[\textbf{2.}] PV current ($I_{solar}$) achieves <100ms settling time
+    \item[\textbf{3.}] PV power ($P_{solar}$) shows quadratic current dependence
+\end{itemize}
+\subsection*{Performance Metrics}
+The comparative analysis between DDPG and PI controllers revealed significant performance improvements across all metrics (Table~\ref{table:performance}). The DDPG controller achieved:
+\begin{itemize}
+    \item 12\% faster response time (75 ms vs 85 ms)
+    \item 73\% reduction in power overshoot (2.1\% vs 7.8\%)
+\end{itemize}
+
+\begin{table}[htbp]
+\caption{Comparative Performance Analysis }
+\label{table:performance}
+\centering
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Metric} & \textbf{DDPG} & \textbf{PI Control} \\
+\hline
+Response Time (ms) & 75 & 85 \\
+Power Overshoot (\%) & 2.1 & 7.8 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection*{Dynamic Response Analysis}
+Figure~\ref{fig:Solar Power Variation} demonstrates the system's dynamic response characteristics, showing:
+\begin{itemize}
+    \item Stable DC link voltage ($V_{DC}$, Signal 1) during current transitions
+    \item Immediate power ($P_{SOLAR}$, Signal 3) adjustment to current steps
+\end{itemize}
+
+\subsection*{Controller Performance Comparison}
+The converter-specific performance metrics (Tables~\ref{table:rsc_performance} and~\ref{table:gsc_performance}) reveal:
+
+\begin{table}[htbp]
+\centering
+\caption{Rotor Side Converter Performance Comparison}
+\label{table:rsc_performance}
+\begin{tabular}{|l|r|r|r|}
+\hline
+\textbf{Controller} & \textbf{Rise Time (ms)} & \textbf{Settling Time (ms)} & \textbf{Overshoot (\%)} \\
+\hline
+PI Controller & 15--20 & 40--50 & 5--8 \\
+DDPG Controller & 8--12 & 20--30 & 2--4 \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\caption{Grid Side Converter Performance Comparison}
+\label{table:gsc_performance}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Controller} & \textbf{DC Link Regulation} & \textbf{Power Factor} \\
+\hline
+PI Controller & $\pm$5\% & 0.95--0.98 \\
+DDPG Controller & $\pm$2\% & 0.97--0.99 \\
+\hline
+\end{tabular}
+\end{table}
+
+Key advantages of the DDPG controller include:
+\begin{itemize}
+    \item \textbf{RSC Performance} (Table~\ref{table:rsc_performance}):
+    \begin{itemize}
+        \item 47--60\% faster rise times
+        \item 50\% reduction in settling time
+        \item 60\% lower overshoot
+    \end{itemize}
+    
+    \item \textbf{GSC Performance} (Table~\ref{table:gsc_performance}):
+    \begin{itemize}
+        \item 60\% tighter DC link voltage regulation
+        \item Improved power factor range
+    \end{itemize}
+\end{itemize}
+
+\begin{figure*}[htbp]
+    \centering
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth,height=5cm]{Used Run4 Results/PID_Rotor_current.png}
+        \caption{PID Rotor Current response on varying wind and solar inputs}
+         \label{f5}
+    \end{subfigure}
+    
+    \begin{subfigure}{\textwidth}
+        \centering
+        \includegraphics[width=\textwidth,height=5cm]{Used Run4 Results/DDPG_Rotor_current.png}
+        \caption{DDPG Rotor Current response on varying wind and solar inputs}
+        \label{f6}
+    \end{subfigure}
+    \caption{Dynamic Response of Rotor Current to varying Wind and Solar inputs}
+    \label{f567}
+\end{figure*}
+
+\begin{figure*}[htbp]
+    \centering
+    \begin{subfigure}{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Used Run4 Results/PID_Vdc.png}
+        \caption{Bus voltage with PID controller}
+        \label{f7}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Used Run4 Results/DDPG_Vdc.png}
+        \caption{Bus voltage with DDPG controller}
+        \label{f8}
+    \end{subfigure}
+    \caption{Dynamic Response of Bus voltage to varying wind speed. Simulation results.}
+    \label{f5671}
+\end{figure*}
+
+\subsection*{Dynamic Response Characteristics}
+The DDPG controller demonstrates superior dynamic performance as shown in Figures \ref{f567} and \ref{f5671}.
+
+The DDPG architecture achieves faster transient response compared to conventional PI controller through:
+\begin{itemize}
+    \item Reduced rise time (8-12ms vs 15-20ms for PI) 
+    \item Improved settling time (20-30ms vs 40-50ms for PI)
+    \item Lower overshoot (2-4\% vs 5-8\% for PI)
+\end{itemize}
+
+This enhanced dynamic performance stems from the controller's ability to utilize optimal control trajectories rather than relying on fixed control gains.
+
+During steady-state operation, DDPG maintains tighter control over key system parameters:
+\begin{itemize}
+    \item DC link voltage regulation: $\pm 2\%$ variation (vs $\pm 5\%$ for PI)
+    \item Power factor control: 0.97-0.99 (vs 0.95-0.98 for PI) 
+\end{itemize}
+
+\section*{Discussion}
+
+The proposed Deep Deterministic Policy Gradient (DDPG) based control strategy represents a significant advancement over conventional PI controller for power electronic converter control applications. This actor-critic architecture combines the advantages of deep learning with deterministic policy gradients to achieve superior control performance.
+
+The comparative analysis with conventional PI control reveals several key advantages of the DDPG approach. In terms of adaptability, while PI controllers operate with fixed parameters that require manual retuning for different operating conditions, the DDPG system continuously adapts through neural network policy updates. The PI controller equation $u(t) = K_p e(t) + K_i \int_0^t e(\tau)d\tau$ shows fixed gains $K_p$ and $K_i$, whereas DDPG uses $\pi_\theta(s_t) = \mu(s_t|\theta^\mu) + \mathcal{N}_t$, representing a neural network policy with parameters $\theta_\mu$ that maps states to actions plus exploration noise.
+
+Regarding state space handling, PI controllers operate on single error signals requiring separate controllers for each objective, leading to decoupled control approaches. DDPG considers multi-dimensional state vectors $s_t = [s_1, s_2, ..., s_n]^T \in \mathbb{R}^n$ simultaneously, developing control policies that account for the coupled nature of the DFIG-solar PV integration .
+
+The control bandwidth comparison shows PI controllers are limited by $\omega_c \leq \frac{\pi}{2T_d}$, while DDPG provides adaptive bandwidth through policy optimization. Implementation complexity differs significantly, with PI controllers having $\mathcal{O}(1)$ computational complexity compared to DDPG's $\mathcal{O}(|\mathcal{S}||\mathcal{A}|)$ complexity, though the performance benefits justify the additional computational requirements .
+
+A critical consideration for the practical deployment of the proposed DDPG controller is the provision of formal stability guarantees. A direct Lyapunov stability analysis of a control law represented by a deep neural network is a recognized and challenging open research problem. The highly non-linear, high-dimensional, and often uninterpretable nature of the DDPG method makes the application of traditional stability analysis techniques difficult. While the simulations under dynamic solar and wind profile in this study provide strong empirical evidence of the controller's stability and robustness, a formal proof remains a key area for future investigation.
+
+The experimental results demonstrate that the DDPG controller achieved 47\% reduction in settling time and 65\% reduction in overshoot during transient conditions. DC link voltage was maintained within ±2\% variation despite significant solar irradiation fluctuations, compared to ±5\% with PI controllers \cite{Zhang2021}. These performance characteristics demonstrate the DDPG controller's superior capabilities in handling the complex dynamics of the hybrid DFIG-PV system.
+
+
+    \section*{Conclusions and Future Scope}
+    
+    
+    This paper has presented a novel Deep Deterministic Policy Gradient (DDPG) based control framework for solar PV-integrated DFIG wind energy systems. The key contributions include:
+    
+    \begin{itemize}
+        \item Development of an advanced actor-critic reinforcement learning architecture specifically designed for power electronic converters in renewable energy systems
+        \item Implementation of a coordinated control strategy for both Rotor Side Converter (RSC) and Grid Side Converter (GSC) using the same DDPG framework
+        \item Elimination of additional converters through direct integration of solar PV at the DC link, resulting in reduced component count and enhanced system efficiency
+        \item Comprehensive performance validation through detailed comparative analysis with conventional PI controllers
+    \end{itemize}
+    
+    \subsection*{Key Performance Advantages}
+    
+    The proposed DDPG-based control strategy has demonstrated significant performance improvements over conventional techniques:
+    
+    \begin{itemize}
+        \item {Enhanced Dynamic Response}: The controller achieved 47\% reduction in settling time and 65\% reduction in overshoot during transient conditions
+        \item {Superior Disturbance Rejection}: DC link voltage maintained within $\pm$2\% variation despite significant solar irradiation fluctuations (compared to $\pm$5\% with PI controllers)
+    \end{itemize}
+    
+    \subsection*{Implementation Considerations}
+    
+    For practical deployment of the proposed technology, several factors must be considered:
+    
+    \begin{enumerate}
+        \item {Computational Requirements}: While the DDPG algorithm requires more computational resources than conventional controllers, the performance benefits justify the additional hardware investment for critical applications
+        \item {System Integration}: The control framework can be implemented on standard DSP platforms with minimal modifications to existing converter hardware
+    \end{enumerate}
+    
+    \subsection*{Future Research Directions}
+    
+    Building on this work, several promising research directions emerge:
+    
+    \begin{enumerate}
+        \item {Scalability and Transferability Approaches}: Developing methods to transfer control policies between different wind turbine configurations to reduce training time. Develop a Multi-Agent DDPG (MADDPG) for multi-turbine-PV farms to scale transfer learning to new operating environments and conditions.
+        %\item {Multi-Agent Coordination}: Extending the DDPG framework to coordinate multiple distributed renewable sources within a microgrid environment
+        \item {Hardware-Accelerated Implementation}: Optimising the algorithm for deployment on FPGA and other embedded platforms to enhance real-time performance
+        \item {Comparative Study}: An additional study can be carried out to compare DDPG results and performance against advanced benchmarks like MPC, fuzzy logic, SMC etc and expanded tests for grid faults, PV shading and load fluctuations.
+        \item {Hybrid Control Architectures}: Combining model-based and learning-based approaches to leverage prior knowledge of the system while maintaining adaptability. A formal stability study method needs to be investigated for deep neural network learning-based controllers.
+    \end{enumerate}
+    
+    The proposed DDPG-based control strategy represents a significant step forward in renewable energy management systems, offering a flexible, high-performance solution for modern power grids with high penetration of intermittent renewable sources. By addressing the limitations of conventional control methods, this approach helps maximize energy yield and enhance system stability, supporting the continued growth of sustainable energy infrastructure.
+
+% \bibliographystyle{plain}
+\subsection*{Funding Statement Declaration}
+Funding : No funding
+\bibliography{references}
+
+\section*{Acknowledgements}
+
+The authors acknowledge the support provided by the Department of Electrical Engineering, National Institute of Technology Uttarakhand, for providing the necessary facilities to conduct this research.
+
+\section*{Author contributions statement}
+
+R.P. conceived the experiment and developed the DDPG algorithm implementation. R.P. and S.B. conducted the simulation experiments and analyzed the results. S.B. and P.D. provided technical guidance and reviewed the methodology. All authors contributed to writing and reviewing the manuscript.
+
+\section*{Additional information}
+\textbf{Competing interests:} The authors declare no competing interests.\\
+ \textbf{Data availability:} All data generated or analysed during this study are included in this published article [and its supplementary information files].
+\end{document}

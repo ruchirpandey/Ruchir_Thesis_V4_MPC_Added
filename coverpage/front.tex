@@ -1,0 +1,60 @@
+\documentclass[12pt]{report}
+\usepackage[table,xcdraw,dvipsnames]{xcolor}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{setspace}
+\usepackage{fontspec}
+\usepackage{titlesec}
+\usepackage{eso-pic}
+\usepackage{tikz}
+
+\geometry{a4paper, margin=1in}
+\setstretch{1.5}
+\setmainfont{Times New Roman}
+
+% Define background color
+\definecolor{mygray}{RGB}{182,221,232}
+
+% Add background color only to text area, not margins
+\AddToShipoutPictureBG{%
+  \AtPageLowerLeft{%
+    \hspace{1in}\raisebox{1in}{%
+      \color{mygray}%
+      \rule{\dimexpr\paperwidth-2in\relax}{\dimexpr\paperheight-2in\relax}%
+    }%
+  }%
+}
+
+\color{black}  % Set text color to black
+
+\begin{document}
+\begin{titlepage}
+    \centering
+    \vspace*{1cm}
+    \fontsize{18pt}{22pt} {Control and Protection of Hybrid AC-DC Microgrid }\\
+    \vspace{2cm}
+    \fontsize{16pt}{18pt}{{ Ph.D Thesis}\\
+    \vspace{1cm}
+    {By}\\
+    \vspace{0.5cm}
+     {Satyaveer Singh Negi}\\[1.5cm]
+    \includegraphics[width=1.49in, height=1.19in]{images/logo.png}\\[1.5cm]
+    % \vspace{4cm}
+    {ELECTRICAL ENGINEERING DEPARTMENT}\\
+    \vspace{0.5cm}
+     {NATIONAL INSTITUTE OF TECHNOLOGY,\\ UTTRAKHAND} \\
+    \vspace{1.5cm}
+    { DECEMBER, 2025 }}
+    
+\end{titlepage}
+    
+\newpage
+\pagestyle{empty}
+\vspace*{\fill}
+\begin{center}
+    {\fontsize{14pt}{16pt}\textit{{Srinagar, Pauri (Garhwal)-246174} \\
+    {Telephone: 01346-257400 
+    E-mail: nituttarakhand@gmail.com}}}
+\end{center}
+\vspace{2.54cm}
+\end{document}

@@ -1,0 +1,372 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment on it.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{Real-Time Performance Investigation of a Solar PV Integrated DFIG System}
+
+\author{\IEEEauthorblockN{Ruchir Pandey}
+\IEEEauthorblockA{\textit{Electrical Engineering} \\
+\textit{NIT Uttarakhand}\\
+Srinagar Garhwal, India \\
+ruchirpandey.phd19@nituk.ac.in}
+\and
+\IEEEauthorblockN{Sourav Bose\\ Senior Member, IEEE}
+\IEEEauthorblockA{\textit{Electrical Engineering} \\
+\textit{NIT Uttarakhand}\\
+Srinagar Garhwal, India \\
+souravbose@nituk.ac.in
+\and
+\IEEEauthorblockN{Prakash Dwivedi\\ Senior Member, IEEE}
+\IEEEauthorblockA{\textit{Electrical Engineering} \\
+\textit{NIT Uttarakhand}\\
+Srinagar Garhwal, India \\
+prakashdwivedi@nituk.ac.in}
+\and
+\IEEEauthorblockN{Satyaveer Negi\\ Student Member, IEEE}
+\IEEEauthorblockA{\textit{Electrical Engineering} \\
+\textit{NIT Uttarakhand}\\
+Srinagar Garhwal, India \\
+satyaveer.negi@nituk.ac.in}}
+
+
+
+}
+\IEEEoverridecommandlockouts
+\IEEEpubid{\makebox[\columnwidth]{978-1-6654-5930-3/22/\$31.00~\copyright2022 IEEE \hfill} \hspace{\columnsep}\makebox[\columnwidth]{ }}
+\maketitle
+\IEEEpubidadjcol
+\begin{abstract}
+
+The necessity of finding replacements for fossil fuels
+has become more widely recognized in response to increased
+energy demand. Therefore, experts are focusing on making
+renewable energy sources like solar and wind viable alternatives
+to long-term solutions for providing reliable and affordable
+electricity. This paper presents the framework for a hybrid
+system. The configuration comprises photovoltaic panels and
+a wind turbine that uses a direct current induction generator
+(DFIG) with controllers for the rotor side and grid side. The
+purpose of this paper is to conduct a performance analysis of
+a solar photovoltaic (PV) system that has been combined with
+a DFIG. A MATLAB/Simulink model of a 60 kW photovoltaic
+array and a 288 kVA DFIG system has been modeled to simulate
+and observe the system performance. The observation shows
+that the integration of a solar photovoltaic (SPV) system with
+a wind energy conversion system (WECS) based on a doubly fed
+induction generator (DFIG) has the potential for demand-side
+power management. Finally, a real-time model is created using
+Opal RT to validate the hybrid system performance comparison
+under various operating conditions. Integration of PV systems with DFIG provides coordinated control, decreases operating costs, and boosts performance during the transfer of power flow.
+
+
+\end{abstract}.
+
+\begin{IEEEkeywords}
+Rotor side converter (RSC), doubly fed induction generator (DFIG), solar photovoltaic (PV), wind energy conversion system (WECS), Real-Time Control(Opal RT).
+\end{IEEEkeywords}
+
+\section{Introduction}
+
+Climate change brought on by fossil fuel emissions and the ever-increasing demand for electricity has prompted the power sector to diversify its energy portfolio to include renewable energy resources(RES). Some of the most well-known RES are photovoltaic (PV) and wind power because of their potential abundance in the environment\cite{8754759,8324152}. 
+
+Multiple energy source hybridization is now playing a significant role in improving system dependability. The off-grid systems need their own power source and can benefit from the hybrid systems of PV and wind plants. Micro-grids are comprised of renewable energy sources, battery energy storage systems, and loads, all interconnected via a common DC bus.
+The doubly fed induction generator (DFIG) is frequently used in wind power production because of its various advantages, such as a lower converter rating and variable speed operation. A wind and solar-powered micro-grid that is designed to connect with the larger power grid must be able to provide steady performance\cite{8709493,8258886}. 
+In \cite{8258886} system performance tests, the system efficacy and external battery charging are shown using the RSC and its sensors to achieve a unity power factor, showing changes in input circumstances and load profiles.
+In \cite{6737926} control strategies were compared for a hybrid system using simulation against different rotor speeds and solar radiation levels.
+A control approach for large-scale wind/solar hybrids was proposed and simulated in \cite{8282892} to improve transient voltage stability by reducing voltage oscillation.
+In \cite{8582016}, a quantitative study of DFIG and PV system integration shows that when the system inertia is much larger, the acceleration power of the system decreases with increasing wind ratio, resulting in increased transient stability. 
+In  \cite{9315701}, using simulation, it states that DFIG performs effectively with variable wind speed, and  MPPT can enhance a wind turbine's range.
+In \cite{7984002} DFIG and solar PV hybrid system performance are investigated in Simulink. It states that DFIG bidirectional converters regulate active and reactive power and maintain DC bus voltage. Under wind speed and irradiation, MPPT control and grid-connected solar inverters are examined.
+In \cite{9038072} discusses the pros and cons of inertial and power reserve frequency controllers in wind turbines. Minimal inertia in micro-grids affects frequency stability.
+In \cite{9106749} wind-driven DFIG, DG, and solar PV with battery energy source (BES) microgrid was investigated. Solar PV array is directly linked to back-to-back VSCs' DC connection and BES is connected through buck-boost converter. Variable wind speeds, irradiance, and nonlinear PCC load were simulated to show system performance in changing conditions.
+The DFIG-battery-PV system works with wind power, and a bidirectional converter-equipped battery is connected to fulfill system needs, as verified in \cite{9767622}. 
+Synchronizing control is proposed in \cite{9594945} for a convenient DFIG-DG connection in a solar PV array and battery microgrid. Wind fluctuations are considered for rotor side VSC and additional frequency loop functioning. Isolated microgrids performed well in simulated conditions with changing wind speeds, solar PV insolations, and imbalanced loads.DFIG grid converters may also be utilized in PV-Battery systems, which improves the power quality \cite{8744999}.
+
+
+\begin{figure*}[htbp]
+\centerline{\includegraphics[width=0.9\textwidth]{Conference_Paper_2022/dfigppp.png}}
+\caption{Grid Side converter and Rotor Side converter control.}
+\label{f1}
+\end{figure*}
+In \cite{8707595} authors tested a DFIG wind system tied to a simulated DC microgrid using PHIL. The FPGA controls a 2.2 kW DFIG linked to an MW DC microgrid. PV, wind, and DC loads (constant current and impedance) were exchanged within and outside the DC microgrid. The controller remained stable despite switching and communication delays. MW-scale DFIG and PHIL hardware are integrated.  DFIG-based wind energy systems showed in \cite{8930282} that properly integrating PV arrays may increase fault ride-through capabilities and lower equipment costs by removing the requirement for PV inverters. The simulation findings included real-time operation, so they were nearly as feasible as experimental results.In \cite{9260720} a new method for regulating DC-link voltage in hybrid PV-wind turbine systems that can flatten the grid. Predictive MPPT and DC-link voltage changes are possible. DFIG can add solar without changing converters using the suggested control mechanism. Article \cite{9789721} implements a PV battery with a wind-driven DFIG grid-connected system with three-stage GSC control. The battery is utilized for maximum wind power extraction, increasing the charging current under light loading conditions. Wind power determines battery charging, and discharging is discussed in the simulation. All the above studies allow more research on AC load demand side power management, variable operating conditions, and contingency studies to enhance topological performance. Also, real-time operating environment platform simulation can verify topological performance.\\
+
+This paper uses a wind-driven DFIG-PV-battery-based grid connected system for a rating of 288 kVA. To analyze its performance in real-time, opal RT is used where the model
+runs under different wind profiles and its corresponding DFIG speed of operation. Also, solar PV integration investigation is observed for power flow management between and grid and DFIG. Fig. \ref{f1} illustrates a wind-powered DFIG and solar PV array connected to the grid. Two converters, RSC and GSC, are connected with the DFIG. A Solar PV System array is connected to a DC link by employing a boost converter with Maximum power point tracking (MPPT) control. It is possible to reduce the ripples caused due to switching by connecting an RC and L filter in the circuit. The power can be generated by combining the output of a wind turbine and a PV solar array. The mathematical modelling is in Section II, and the control topology and real-time integration are in Section III. In Section IV, we discuss the results. Finally;
+section V concludes the work.
+ 
+\section{Mathematical Modelling of Hybrid DFIG-Solar PV system }
+Fig.\ref{f1} illustrates a wind-powered DFIG and a solar PV array connected to the grid. The RSC and the GSC are the two converters connected to the DFIG. 
+A solar PV system array is connected to a DC link by employing a boost converter with maximum power point tracking (MPPT) control. It is possible to reduce the ripples caused by voltage switching by connecting an RC and an L filter in the circuit. The power can be generated by combining the output of a wind turbine and a PV solar array.
+
+
+\subsection{Modelling of Wind Turbine}
+The mechanical energy obtained by a wind turbine is a function of the wind velocity, $V_w$, the turbine radius, r, and the performance coefficient, $C_p$. These parameters can be obtained from the given eq. \eqref{eq1}, \eqref{eq2}, \eqref{eq3} \& \eqref{eq4}.
+\begin{equation}
+P_{m}=0.5c_{p}\pi r^{2}\rho V_{w}^{3}\label{eq1}
+\end{equation}
+
+\begin{equation}
+c_{p}(\lambda,\beta)=0.73(\frac{151}{\lambda_{i}}-0.002*\beta-13.2)e^{-({18.4}{\lambda_{i}})}\label{eq2}
+\end{equation}
+
+\begin{equation}
+\frac{1}{\lambda_{i}}= \frac{1}{(\lambda+0.08\beta)}-\frac{0.035}{\beta^{3}+1}  \label{eq3}
+\end{equation}
+
+\begin{equation}
+\lambda=\frac{\omega_{T}  r}{V_{w}}=\frac{\omega_{r} r}{\eta_{G} V_{w}} \label{eq4}
+\end{equation}
+Where $\lambda$ is a function of wind speed $V_w$, turbine speed $\omega_T$, and the gear ratio between the generator and the turbine shaft is given by $\eta_G$.
+
+\subsection{D-Q modeling of DFIG}
+A DQ frame conversion is performed when performing control and analysis on the three-phase voltages, shown in eq. \eqref{eq5}
+\begin{equation}
+\left[
+\begin{matrix}
+V_{a} \\
+V_{b}\\
+ V_{c}
+
+\end{matrix}
+\right]
+=\left[
+\begin{matrix}
+sin(\omega t) & cos(\omega t ) & 1 \\
+sin(\omega t- 120) & cos(\omega t -120) & 1 \\
+sin(\omega t-240) & cos(\omega t-240 ) & 1 \\
+\end{matrix}
+\right]
+\left[
+\begin{matrix}
+V_{d} \\
+V_{q}\\
+ V_{0}
+
+\end{matrix}
+\right]
+\label{eq5}
+\end{equation}
+
+\subsection{Voltage equations}
+\subsubsection{Stator Voltage Equations}
+%\begin{equation}
+\begin{equation}
+V_{qs}=p\lambda_{qs}+\omega\lambda_{qs}+r_{s}i_{qs} \label{eq6} 
+\end{equation}
+\begin{equation}
+V_{ds}=p\lambda_{ds}+\omega\lambda_{qs}+r_{s}i_{ds} \label{eq7}
+\end{equation}
+The quadrature and direct axis stator voltages are denoted by $V_q_s$ and $V_d_s$ as shown in eq. \eqref{eq6} \&\eqref{eq7}, while the stator fluxes are denoted by $\lambda_q_s$ and $\lambda_d_s$. The resistance of the stator is denoted by $r_s$. p is the number of poles, and $\omega_r$  is the DQ frame frequency.
+
+%\end{equation}
+	
+%	\begin{equation}
+%	V_{ds}=p\lambda_{ds}+\omega\lambda_{qs}+r_{s}t_{ds} \label{eq2}
+%	\end{equation}
+\subsubsection{Rotor Voltage Equation}
+\begin{equation}
+V_{qr}=p\lambda_{qr}+(\omega-\omega_{r})\lambda_{dr}+r_{r}i_{qr} \label{eq8} 
+\end{equation}
+\begin{equation}
+V_{dr}=p\lambda_{dr}-(\omega-\omega_{r})\lambda_{qr}+r_{r}i_{dr} \label{eq9} 
+\end{equation}
+
+Voltages on the rotor quadrature and direct axes, indicated by $V_q_r$ and $V_d_r$, are determined in eq. \eqref{eq8} \& \eqref{eq9}, respectively. The quadrature and direct axis rotor fluxes are denoted by $\lambda_q_r$ and $\lambda_d_r$, respectively. The rotor resistance is denoted by $r_r$, whereas the rotor frame frequency is indicated by $\omega_r$.
+\subsection{Flux Linkage Equation}
+\subsubsection{Stator Flux Equations}
+
+
+\begin{equation}
+\lambda_{qs}=(L_{is}+L_{m})i_{qr}+ L_{m}i_{qs} \label{eq10}
+\end{equation}
+\begin{equation}
+\lambda_{ds}=(L_{is}+L_{m})i_{dr}+ L_{m}i_{ds} \label{eq11} 
+\end{equation}
+
+\subsubsection{Rotor Flux Linkage}
+\begin{equation}
+\lambda_{qr}=(L_{ir}+L_{m})i_{qr}+ L_{m}i_{qs} \label{eq12} 
+\end{equation}
+\begin{equation}
+\lambda_{dr}=(L_{is}+L_{m})i_{dr}+ L_{m}i_{ds} \label{eq13} 
+\end{equation}
+
+In this case, the magnetic inductance represented by the symbol $L_m$. Stator and rotor leakage inductances are denoted by $L_i_s$ and $L i_r$, respectively. Eq. \eqref{eq10},\eqref{eq11},\eqref{eq12} \& \eqref{eq13} can be used to determine the flux in both the stator and the rotor.
+
+\subsection{Power Equation}
+\begin{align}
+P_{s}=\frac{3}{2}(V_{ds}i_{ds}-V_{qs}i_{qs})\label{eq14}\\
+Q_{s}=\frac{3}{2}(V_{qs}i_{ds}-V_{ds}i_{qs})\label{eq15}
+\end{align}
+Where $P_s$ and $Q_s$ represent the active and reactive powers of the stator, and where $i_d_s$ and $i_q_s$ represent the direct and quadrature axis stator currents, respectively shown in eq. \eqref{eq14} \&\eqref{eq15}.
+\subsection{Torque Equation}
+\begin{equation}
+T_{e}=-\frac{3p}{4} (\lambda_{ds} i_{qs}-\lambda_{qs} i_{ds})\label{eq16}
+\end{equation}
+where, $T_{e} $ is the electromagnetic torque as shown in eq.\eqref{eq16}.
+
+\subsection{Modelling of Rotor Side and Grid Side Converters}
+\begin{align}
+P_{RSC}=P_{GSC}+P_{dc}+P_{SPV}\label{eq17}\\
+P_{RSC}=V_{dr}i_{dr}+V_{qr}i_{qr}\label{eq18}\\
+P_{GSC}=V_{dg}i_{dg}+V_{qg}i_{qg}\label{eq19}\\
+P_{dc}=CV_{dc} \frac{V_{dc}}{dt}\label{eq20}
+\end{align}
+Where, eq. ~\eqref{eq17},\eqref{eq18},\eqref{eq19} \& \eqref{eq20} shows $P_R_S_C$,$ P_G_S_C$, $P_d_c$, & $P_S_P_V$ are sources of power at the RSC, GSC side, DC link, and solar PV, respectively. 
+$V_d_g$, $V_q_g$, $i_d_g$, and $i_q_g$ are the AC voltage at the GSC side in the DQ frame. $V_d_c$ is the DC link voltage, and C is the DC link capacitor.
+
+\subsection{Modelling of Solar PV System}
+The fig. \ref{solar_pv} illustrates the model of a solar photovoltaic (PV) cell with a single diode. The equations for solar cells can be derived from eq. \eqref{eq21} for model structure is as described above.
+\begin{figure}[htbp]
+\centerline{\includegraphics[scale=0.9]{SPV.jpg}}
+\caption{One diode model of solar PV.}
+\label{solar_pv}
+\end{figure}
+
+
+\begin{align}
+I=I_{ph}-I_{s}(e^\frac{{V+IR_{s}}}{n_{s}aV_{t}}-1)-\frac{V+IR_{s}}{R_{p}}\label{eq21}
+\end{align}
+Where, I and V stand for the output current and voltage, respectively, $I_ p_h$ is the photovoltaic cell current that is directly related to irradiation level, $I_s$ stand for diode current, $N_S$ is the number of the series connected cell in the module, $\alpha$ shows the diode quality factor, Vt, is the thermal voltage of the cell semiconductor, and $R s$ and $R p$ represent the cell series and parallel resistance, respectively. Eq.\eqref{eq22} is used to determine $I_s$depending on the module temperature and the parameters provided in the data-sheet.
+\begin{equation}
+I_{s}=\frac{I_{SC}+ki(T-T_{c})}{e^\frac{{V_{oc}+k_{v}(T-T_{c})}}{n_{s}aV_{t}}-1}
+\label{eq22}
+\end{equation}
+
+
+\subsection{Solar Maximum Power Point Tracking}
+For the Maximum Power Point Tracking, the fixed voltage method is used. In the fixed voltage method, the PV panel voltage is fixed using the P-V characteristics where voltage corresponding to maximum power is set as reference. Since the maximum power point occurs at some fixed ratio of the open circuit voltage\cite{en13040894}, the open circuit voltage could be obtained. Subsequently, the PV panel voltage can be calculated using the fixed ratio. With the help of an MPPT controller, the duty cycle can be varied till the optimum value of panel voltage is reached.
+
+\section{Control strategy for Solar PV Integration}
+\subsubsection{Solar PV Voltage Control}
+A buck-boost converter is used to control the output voltage to the same as the voltage of the DC link capacitor even while maintaining the maximum power output of the Solar Array. By continuously monitoring the DC link voltage and regulating the duty ratio of the buck-boost converter, the fixed voltage technique allows the maximum amount of power to be injected for the terminal voltage\cite{KumarTiwari2018DesignAC,5712542,Shajari2012ReductionOB}.
+\subsubsection{Control of Grid Side Converter (GSC)}
+Active power ($P_g$) and reactive power ($Q_g$) control of the GSC can be independently regulated according to the SVPWM method in \cite{Shajari2012ReductionOB} used to regulate the GSC. 
+Since $P_g$ and $Q_g$ are no longer coupled, we can independently regulate the grid-connected inverter's reactive power and active power by adjusting the references for $ i_g_q$ and $ i_g_d$. 
+The available power at the dc link fluctuates throughout the day. This variation is reflected in the voltage across the DC link capacitor, which can be monitored and then used as a reference by the PID controller to determine the values of $ i_d_g$ and $ i_q_g$. 
+
+Another PID controller is set to minimise the output current values error by comparing the reference values with the actual grid current values of the d and q components. 
+By setting the error values to a 0.01\% tolerance range, a Genetic algorithm(GA) is used to fine-tune the PID by minimising a function based on the integral squared of the error values\cite{article,doi:10.1080/15325008.2020.1856231}.
+\section{Results}
+The system was simulated on an OPAL-RT system, shown in Fig. \ref{f3} with model data as follows in Table \ref{tab1}.
+The system was run under two operating conditions, for which the results were compared and analyzed. The first scenario was to execute the wind system with changes in wind speed, and the second scenario was to execute a wind-solar integrated model with multiple changes in solar current.
+\begin{figure}[htbp]
+\includegraphics[width=0.5\textwidth]{Conference_Paper_2022/opalrt.png}
+\caption{DFIG Opal-RT Real Time test hardware }
+\label{f3}
+\end{figure}
+% \usepackage{booktabs}
+\begin{table}
+\centering
+\caption{PARAMETERS FOR INTEGRATED DFIG PV MODEL}
+\begin{tabular}{llll} 
+\toprule
+\multicolumn{2}{l}{\textbf{POWER RATING}} & \multicolumn{2}{l}{\textbf{PV PARAMETERS}} \\ 
+\hline
+Rated Power & 288 kVA & Rated Power & 60kW \\
+\begin{tabular}[c]{@{}l@{}}Nominal\\Voltage\end{tabular} & 415Vrms & PV Irradiation & 1000W/m² \\
+\begin{tabular}[c]{@{}l@{}}Rated \\Frequency\end{tabular} & 50 Hz &  \\
+\begin{tabular}[c]{@{}l@{}}DC LINK\\Voltage\end{tabular} & 1200V & \begin{tabular}[c]{@{}l@{}}Series \\Resistance\end{tabular} & 0.55ohm \\
+\begin{tabular}[c]{@{}l@{}}Capacitor \\Link\end{tabular} & 2200uf & \begin{tabular}[c]{@{}l@{}}Short \\Circuit\\Current\end{tabular} & 5A \\
+\multicolumn{2}{l}{\textbf{DFIG Wind System }} &\\
+Machine Type & \begin{tabular}[c]{@{}l@{}}Slip Ring \\Induction \\Machine\end{tabular} & Inductor & 5mH \\
+& Capacitor & 1000uF \\
+Rotor Speed & \multicolumn{3}{l}{1640 RPM} \\
+\begin{tabular}[c]{@{}l@{}}Rotor \\Current\end{tabular} & \multicolumn{3}{l}{60A} \\
+Wind Speed & \multicolumn{3}{l}{5-12m/sec} \\
+ \\
+\bottomrule
+\end{tabular}
+\label{tab1}
+\end{table}
+
+The results for the hybrid wind-solar PV system are as follows:
+\begin{figure*}[htbp]
+ \centering
+\begin{subfigure}{0.49\textwidth}
+     \centering
+     \includegraphics[width=\textwidth]{Conference_Paper_2022/Run1_M3_RotorCurrent1.png}
+\caption{With varying wind speed}
+     \label{f4}
+ \end{subfigure}
+ \begin{subfigure}{0.49\textwidth}
+\includegraphics[width=\textwidth]{Conference_Paper_2022/Run4_M3_Rotor_Current1.png}
+\caption{ With varying solar irradiation \&constant wind speed}
+\label{f55}
+\end{subfigure}
+\label{f555}
+\caption{DFIG rotor current  under different modes of operation}
+\end{figure*}
+
+
+
+
+\begin{figure*}[!htbp]
+ \centering
+\begin{subfigure}{0.32\textwidth}
+     \centering
+     \includegraphics[width=\textwidth]{Conference_Paper_2022/Run2_M1_PSolar1.png}
+\caption{ Varying wind speed with constant solar}
+     \label{f5}
+ \end{subfigure}
+  \begin{subfigure}{0.32\textwidth}
+     \centering
+     \includegraphics[width=\textwidth]{Conference_Paper_2022/Run4_M1_Solar1.png}
+\caption{Varying solar at constant wind speed}
+\label{f6}
+  \end{subfigure}
+ \begin{subfigure}{0.32\textwidth}
+     \centering
+ \includegraphics[width=\textwidth]{Conference_Paper_2022/Run5_M1_Solar1.png}
+\caption{Varying both wind and solar input}
+\label{f7}
+ \end{subfigure}
+\label{f567}
+\caption{DFIG $I_s_o_l_a_r$, $P_s_o_l_a_r$ and $V_d_c$ under different modes of operation}
+\end{figure*}
+Figures \ref{f4} and \ref{f9} show that when the wind speed exceeds 11 m/s, DFIG switches from sub-synchronous to super-synchronous mode, whereas $P_r_o_t_o_r$ moves from positive to negative and $P_g_r_i_d$ goes from negative to positive. The value of $P_s_t_a_t_o_r$ does not change no matter how fast are the prevailing winds.
+\begin{figure*}[!htbp]
+ \centering
+\begin{subfigure}{0.49\textwidth}
+     \centering
+     \includegraphics[width=\textwidth]{Conference_Paper_2022/Run1_M4_Powers1.png}
+\caption{$P_r_o_t_o_r$ ,$P_g_r_i_d$ and $V_d_c$ under variable wind speed}
+     \label{f9}
+ \end{subfigure}
+\hfill
+  \begin{subfigure}{0.49\textwidth}
+     \centering
+     \includegraphics[width=\textwidth]{Conference_Paper_2022/Run4_M2_Powers1.png}
+\caption{$P_s_o_l_a_r$, $P_r_o_t_o_r$ \& $P_g_r_i_d$ under variable solar input}
+\label{f10}
+ \end{subfigure}
+ 
+\label{f910}
+\caption{DFIG power analysis under different modes of operation ()}
+\end{figure*}
+ Wind speeds are kept constant at 11.2 m / sec in \ref{f5} and \ref{f10}, and the machine operates in super synchronous mode at 1640 rev/min. $V d c$ and $P_r_o_t_o_r$ do not change despite a rise in $I_s_o_l_a_r$ from 0 to 30A and then from 30A to 50A; however, $P_g_r_i_d$  does increase due to the increase in solar current. In Fig. \ref{f55}, because the wind speed is steady, there is no change in $I_r_o_t_o_r$ even though $I_s_o_l_a_r$ is increasing gradually.
+
+\section{Conclusion}
+Integrating the solar PV system with the DC link of the rotor side converter eliminates the need to use a separate converter for the solar PV plant. It makes the whole hybrid system work better.
+This paper looks at real-time performance analyses of an integrated model to describe how the model behaves in different weather and load conditions. It cuts down on the number of parts needed for conversion and improves the overall conversion efficiency of the hybrid system in terms of control efforts. 
+The power exchange during sub-synchronous DFIG is from the grid $\rightarrow$ Gsc $\rightarrow$ Rsc$\rightarrow$ rotor. When  $P_s_o_l_a_r$ is injected during sub-synchronous operation, the power exchange between Rsc $\rightarrow$ Gsc is reduced by the same amount as $P_s_o_l_a_r$ . This implies that losses at Gsc are reduced, and overall efficiency is improved.
+The system is more reliable when fewer steps are involved in the conversion. The plans for the study include additional runs of the hybrid system with changes in wind speed and solar irradiance occurring simultaneously.
+
+%\section*{References}
+\bibliographystyle{IEEEtran}
+\bibliography{ruchir}
+
+\end{document}

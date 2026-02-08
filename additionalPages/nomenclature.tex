@@ -1,0 +1,100 @@
+\begin{center}
+% {\fontsize{18pt}{20pt}\selectfont \textbf{\underline{NOMENCLATURE AND SYMBOLS}}}
+{\fontsize{18pt}{20pt}\bookmanheading{\underline{NOMENCLATURE AND SYMBOLS}}}
+\end{center}
+\addcontentsline{toc}{section}{NOMENCLATURE AND SYMBOLS}
+
+\subsection*{DFIG Electrical Variables}
+\begin{tabular}{ll}
+$i_{qs}, i_{ds}$ & Stator d-q axis currents (A) \\
+$i_{qr}, i_{dr}$ & Rotor d-q axis currents (A) \\
+$v_{qs}, v_{ds}$ & Stator d-q axis voltages (V) \\
+$v_{qr}, v_{dr}$ & Rotor d-q axis voltages (V) \\
+$\psi_{qs}, \psi_{ds}$ & Stator d-q axis flux linkages (Wb) \\
+$\psi_{qr}, \psi_{dr}$ & Rotor d-q axis flux linkages (Wb) \\
+$P_s, Q_s$ & Stator active and reactive power (W, VAR) \\
+$P_g, Q_g$ & Grid active and reactive power (W, VAR) \\
+$V_s$ & Stator voltage magnitude (V) \\
+$R_s, R_r$ & Stator and rotor resistances ($\Omega$) \\
+$L_s, L_r$ & Stator and rotor inductances (H) \\
+$L_m$ & Mutual inductance (H) \\
+$L'_s$ & Transient stator inductance (H) \\
+\end{tabular}
+
+\subsection*{DFIG Mechanical Variables}
+\begin{tabular}{ll}
+$\omega_r$ & Rotor angular velocity (rad/s) \\
+$\omega_s$ & Synchronous angular velocity (rad/s) \\
+$\theta_r$ & Rotor angular position (rad) \\
+$s$ & Slip ratio \\
+$T_m$ & Mechanical torque (Nm) \\
+$T_e$ & Electromagnetic torque (Nm) \\
+$J$ & Moment of inertia (kg·m$^2$) \\
+$B$ & Viscous damping coefficient (Nm·s/rad) \\
+\end{tabular}
+
+\subsection*{Power Electronic and DC Link Variables}
+\begin{tabular}{ll}
+$v_{dc}$ & DC link voltage (V) \\
+$v_{dc}^*$ & Reference DC link voltage (V) \\
+$C$ & DC link capacitance (F) \\
+$i_{pv}$ & Solar PV current (A) \\
+$P_{pv}$ & Solar PV power (W) \\
+$i_{r,dc}$ & RSC DC side current (A) \\
+$i_{g,dc}$ & GSC DC side current (A) \\
+$v_{gd}, v_{gq}$ & Grid-side converter d-q voltages (V) \\
+$i_{gd}, i_{gq}$ & Grid-side converter d-q currents (A) \\
+$e_{gd}, e_{gq}$ & Grid d-q voltages (V) \\
+$R_g, L_g$ & Grid filter resistance and inductance ($\Omega$, H) \\
+\end{tabular}
+
+\subsection*{Solar PV Model Parameters}
+\begin{tabular}{ll}
+$I_{ph}$ & Photocurrent (A) \\
+$I_s$ & Reverse saturation current (A) \\
+$R_{s,pv}$ & Series resistance ($\Omega$) \\
+$R_p$ & Parallel (shunt) resistance ($\Omega$) \\
+$n_s$ & Number of cells in series \\
+$V_t$ & Thermal voltage (V) \\
+$G$ & Solar irradiance (W/m$^2$) \\
+$T$ & Cell temperature (K or °C) \\
+\end{tabular}
+
+\subsection*{Reinforcement Learning Variables}
+\begin{tabular}{ll}
+$\mathbf{s}, s_t$ & State vector at time $t$ \\
+$\mathbf{a}, a_t$ & Action vector at time $t$ \\
+$r_t$ & Reward at time $t$ \\
+$\gamma$ & Discount factor \\
+$\pi$ & Policy (deterministic) \\
+$\mu_\theta(s)$ & Actor network (policy) with parameters $\theta$ \\
+$Q_\phi(s,a)$ & Critic network (Q-function) with parameters $\phi$ \\
+$\theta, \phi$ & Actor and critic network parameters \\
+$\theta', \phi'$ & Target actor and critic network parameters \\
+$\tau$ & Target network update rate \\
+$\mathcal{B}$ & Experience replay buffer \\
+$\alpha$ & Learning rate \\
+$\mathcal{S}$ & State space \\
+$\mathcal{A}$ & Action space \\
+\end{tabular}
+
+\subsection*{Reward Function Weights}
+\begin{tabular}{ll}
+$w_1$ & Frequency tracking weight \\
+$w_2$ & Rotor active power tracking weight \\
+$w_3$ & Rotor reactive power tracking weight \\
+$w_4$ & DC link voltage regulation weight \\
+$w_5$ & Grid active power tracking weight \\
+$w_6$ & Grid reactive power tracking weight \\
+\end{tabular}
+
+\subsection*{General Symbols}
+\begin{tabular}{ll}
+$\omega_b$ & Base angular frequency (rad/s) \\
+$f$ & Frequency (Hz) \\
+$t$ & Time (s) \\
+$\delta$ & Load angle (rad) \\
+$\mathbb{R}^n$ & $n$-dimensional real vector space \\
+$\mathbb{E}[\cdot]$ & Expected value operator \\
+$\nabla$ & Gradient operator \\
+\end{tabular}

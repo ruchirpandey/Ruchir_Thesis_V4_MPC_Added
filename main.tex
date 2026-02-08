@@ -1,0 +1,435 @@
+\documentclass[14pt]{report}
+\usepackage[a4paper, margin=1in]{geometry}
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{subcaption}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{titling}
+\usepackage{tocloft}
+\setlength{\cfttabnumwidth}{3em}    
+\usepackage{xcolor}
+\usepackage{polyglossia}
+\setdefaultlanguage{english}
+\setotherlanguage{hindi}
+\usepackage{fancyhdr}
+\newfontfamily\bookmanfont{URW Bookman}
+
+\newfontfamily\hindifont[Script=Devanagari]{Noto Sans Devanagari}
+\newfontfamily\hindifontsf[Script=Devanagari]{Noto Sans Devanagari}
+\newfontfamily\hindifonttt[Script=Devanagari]{Noto Sans Devanagari}
+% \newfontfamily\newsgothicfont{News Gothic BT}
+\newfontfamily\newsgothicfont{Liberation Sans} % Open source alternative
+% \newfontfamily\newsgothicfont{Helvetica}      %
+
+\cftsetindents{chapter}{1.5em}{3em}   
+\cftsetindents{section}{1.5em}{3em}
+\cftsetindents{subsection}{4em}{4em}
+
+\renewcommand{\thesection}{A.\thechapter.\arabic{section}}
+\renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
+\usepackage{etoolbox} 
+\pagestyle{fancy}
+\usepackage{multirow} 
+\usepackage{newtxtext,newtxmath}
+
+\definecolor{saffron}{RGB}{255,153,51}
+\definecolor{nitblue}{RGB}{0, 0, 255}
+\definecolor{royalblue}{RGB}{0, 51, 204}
+
+\definecolor{wordfade}{RGB}{128,128,128}      % Most common Word fade color
+\definecolor{wordlightfade}{RGB}{153,153,153} % Lighter Word fade
+\definecolor{worddarkfade}{RGB}{102,102,102}  % Darker Word fade
+% You can also use the gray equivalent
+\definecolor{wordgray}{gray}{0.5}             % 50% gray (matches RGB 128,128,128)
+
+\fancyhf{} 
+\renewcommand{\headrulewidth}{0.4pt}
+
+\newcommand{\bookmanheading}[1]{
+  \begin{center}
+    {\bookmanfont\huge\textbf{#1}}
+  \end{center}
+  \vspace{1cm}
+}
+
+\newcommand{\customchapter}[2]{%
+  \clearpage
+  \setcounter{section}{0}
+  \setcounter{subsection}{0}
+  \refstepcounter{chapter}
+  \addcontentsline{toc}{chapter}{\textbf{CHAPTER - \thechapter: \MakeUppercase{#2}}}
+  \begin{flushright}
+    {\fontsize{16}{18}\selectfont\textbf{CHAPTER - \thechapter}}\\[0.5cm]
+    {\fontsize{16}{18}\selectfont\textbf{\MakeUppercase{#2}}}\\[0.5cm]
+  \end{flushright}
+  \noindent\underline{\makebox[\textwidth][l]{\leaders\hbox{\textbf{--}}\hfill}}
+  \vspace{0.5cm}
+}
+
+\fancypagestyle{certificate}{
+  \fancyhf{}
+ \renewcommand{\headrulewidth}{0.4pt} 
+  \fancyhead[C]{\textcolor{royalblue}{{\hindifont\Large \textbf{राष्ट्रीय प्रौद्योगिकी संस्थान,\\ उत्तराखंड}}\\{\Large\textbf{National Institute of Technology,\\ Uttarakhand}}}}   
+ \fancyhead[R]{\includegraphics[height=2.5 cm]{images/logo.jpg}} 
+ \fancyfoot[C]{\textcolor{wordfade}{{\thepage}\\
+    \small Srinagar, Pauri (Garhwal)-246174\\
+    \small E-mail: \texttt{nituttarakhand@gmail.com}}}}
+
+\fancypagestyle{resume}{
+  \fancyhf{}
+    \renewcommand{\headrulewidth}{0pt}
+   \fancyfoot[C]{\textcolor{wordfade}\thepage} 
+}
+
+\fancypagestyle{abstract}{
+  \fancyhf{}
+  \renewcommand{\headrulewidth}{0.1pt}
+  \fancyhead[R]{\textcolor{wordfade}{\fontsize{12pt}\textbf{\textit{Abstract}}}}
+  \fancyfoot[C]{\textcolor{wordfade}\thepage} 
+}
+
+\fancypagestyle{tocstyle}{
+  \fancyhf{}
+  \renewcommand{\headrulewidth}{0.1pt}
+  \fancyhead[R]{\textcolor{wordfade}{\fontsize{12pt}\textbf{\textit{Table of Contents}}}}
+\fancyfoot[C]{\textcolor{wordfade}\thepage}
+}
+
+\fancypagestyle{listoffigures}{
+  \fancyhf{}
+  \renewcommand{\headrulewidth}{0.1pt}
+  \fancyhead[R]{\textcolor{wordfade}{\fontsize{12pt}\textbf{\textit{List of Figures}}}}
+  \fancyfoot[C]{\textcolor{wordfade}\thepage}
+}
+
+\fancypagestyle{listoftables}{
+  \fancyhf{}
+  \renewcommand{\headrulewidth}{0.1pt}
+  \fancyhead[R]{\textcolor{wordfade}{\fontsize{12pt}\textbf{\textit{List of Tables}}}}
+  \fancyfoot[C]{\textcolor{wordfade}\thepage}
+}
+
+\fancypagestyle{Nomenclature and Symbols}{
+  \fancyhf{}
+  \renewcommand{\headrulewidth}{0.1pt}
+  \fancyhead[R]{\textcolor{wordfade}{\fontsize{12pt}\textbf{\textit{Nomenclature and Symbols}}}}
+  \fancyfoot[C]{\textcolor{wordfade}\thepage} 
+}
+
+\fancypagestyle{abbreviations}{
+  \fancyhf{}
+  \renewcommand{\headrulewidth}{0.1pt}
+  \fancyhead[R]{\textcolor{wordfade}{\fontsize{12pt}\textbf{\textit{Abbreviations}}}}
+  \fancyfoot[C]{\textcolor{wordfade}\thepage}
+}
+
+% Chapter page styles with Word-like fade
+\fancypagestyle{chapterA1}{
+  \fancyhf{}
+  \renewcommand{\headrulewidth}{0.1pt}
+  \fancyhead[R]{\textcolor{wordfade}{\fontsize{12pt}\textbf{\textit{Chapter A.1: Introduction and Overview}}}}
+  \fancyfoot[C]{\textcolor{wordfade}\thepage} 
+}
+
+\fancypagestyle{chapterA2}{
+  \fancyhf{}
+  \fancyhead[R]{\textcolor{wordfade}{\fontsize{12pt}\textbf{\textit{Chapter A.2: Literature Review}}}}
+  \fancyfoot[C]{\textcolor{wordfade}\thepage}
+  \renewcommand{\headrulewidth}{0.4pt} 
+}
+
+% \fancypagestyle{chapterA3}{
+%   \fancyhf{}
+%   \fancyhead[R]{\textcolor{wordfade}{\fontsize{12pt}\textbf{\textit{Chapter A.3: System Configuration}}}}
+%   \fancyfoot[C]{\thepage} 
+%   \renewcommand{\headrulewidth}{0.4pt} 
+% }
+
+\fancypagestyle{chapterA3}{
+  \fancyhf{}
+  \fancyhead[R]{\textcolor{wordfade}{\fontsize{12pt}\textbf{\textit{Chapter A.3: Control Strategies}}}}
+  \fancyfoot[C]{\textcolor{wordfade}\thepage} 
+  \renewcommand{\headrulewidth}{0.4pt} 
+}
+
+\fancypagestyle{chapterA4}{
+  \fancyhf{}
+  \fancyhead[R]{\textcolor{wordfade}{\fontsize{12pt}\textbf{\textit{Chapter A.4: Modelling and Simulation}}}}
+  \fancyfoot[C]{\thepage}
+  \renewcommand{\headrulewidth}{0.4pt}
+}
+
+\fancypagestyle{chapterA5}{
+  \fancyhf{}
+  \fancyhead[R]{\textcolor{wordfade}{\fontsize{12pt}\textbf{\textit{Chapter A.5: Experimental Validation Framework}}}}
+  \fancyfoot[C]{\textcolor{wordfade}\thepage}
+  \renewcommand{\headrulewidth}{0.4pt} 
+}
+
+\fancypagestyle{chapterA6}{
+  \fancyhf{}
+  \fancyhead[R]{\textcolor{wordfade}{\fontsize{12pt}\textbf{\textit{Chapter A.6: Performance Evaluation and Results}}}}
+  \fancyfoot[C]{\textcolor{wordfade}\thepage}
+  \renewcommand{\headrulewidth}{0.4pt} 
+}
+
+% \fancypagestyle{chapterA8}{
+%   \fancyhf{}
+%   \fancyhead[R]{\textcolor{wordfade}{\fontsize{12pt}\textbf{\textit{Chapter A.8: Critical Discussion}}}}
+%   \fancyfoot[C]{\textcolor{wordfade}\thepage}
+%   \renewcommand{\headrulewidth}{0.4pt} 
+% }
+
+\fancypagestyle{chapterA7}{
+  \fancyhf{}
+  \fancyhead[R]{\textcolor{wordfade}{\fontsize{12pt}\textbf{\textit{Chapter A.7: Conclusion and Future Scope}}}}
+  \fancyfoot[C]{\textcolor{wordfade}\thepage}
+  \renewcommand{\headrulewidth}{0.4pt} 
+}
+
+\begin{document}
+
+\include{additionalPages/titlePage}
+
+%================== DEDICATION ====================
+\newpage
+\thispagestyle{empty}
+\pagestyle{empty}
+\include{additionalPages/dedication}
+
+%================== COPYRIGHT ====================
+\newpage
+\thispagestyle{empty}
+\pagestyle{empty}
+\vspace*{\fill}
+\begin{center}
+\textcopyright~
+\textbf{NATIONAL INSTITUTE OF TECHNOLOGY, UTTARAKHAND}\\[0.3cm]
+\textbf{SRINAGAR (GARHWAL) - 2025}\\[0.3cm]
+\textbf{ALL RIGHTS RESERVED}
+\end{center}
+\vspace*{\fill}
+%================== DECLARATION ====================
+\newpage
+\begingroup
+% \newsgothicfont  % Apply News Gothic BT font
+\newsgothicfont
+\onehalfspacing  % Apply 1.5 line spacing
+\thispagestyle{resume}
+\pagestyle{resume}
+\pagenumbering{roman} % Roman page numbers for front matter
+\include{additionalPages/declaration}
+\endgroup
+
+
+
+%================== CERTIFICATE ====================
+\thispagestyle{certificate}
+\pagestyle{certificate}
+\include{additionalPages/certificate}
+
+%================== ACKNOWLEDGEMENT ====================
+\newpage
+\thispagestyle{resume}
+\pagestyle{resume}
+\include{additionalPages/acknowledgement}
+
+%================== RESUME ==============
+\thispagestyle{resume}
+\pagestyle{resume}
+\include{additionalPages/resume}
+
+%================== ABSTRACTs ==============
+\thispagestyle{abstract}
+\pagestyle{abstract}
+\include{additionalPages/abstract}
+
+%================== TOC and Others ====================
+\newpage \addtocontents{toc}{\protect\thispagestyle{tocstyle}}
+\thispagestyle{tocstyle}
+\pagestyle{tocstyle}
+\renewcommand{\contentsname}{\begin{center}{\fontsize{18pt}{20pt}\bookmanheading{\underline{TABLE OF CONTENTS}}}\end{center}}
+\tableofcontents
+
+
+\newpage  \addtocontents{lof}{\protect\thispagestyle{listoffigures}}
+\thispagestyle{listoffigures}
+\pagestyle{listoffigures}
+\addcontentsline{toc}{section}{LIST OF FIGURES}
+\renewcommand{\listfigurename}{\begin{center}{\fontsize{18pt}{20pt}\bookmanheading{\underline{LIST OF FIGURES}}}\end{center}}
+\listoffigures
+
+
+\newpage \addtocontents{lot}{\protect\thispagestyle{listoftables}}
+\thispagestyle{listoftables}
+\pagestyle{listoftables}
+\addcontentsline{toc}{section}{LIST OF TABLES}
+ \renewcommand{\listtablename}{\begin{center}{\fontsize{18pt}{20pt}\bookmanheading{\underline{LIST OF TABLES}}}\end{center}}
+\listoftables
+
+\newpage
+\thispagestyle{Nomenclature and Symbols}
+\pagestyle{Nomenclature and Symbols}
+\input{additionalPages/nomenclature}
+
+\newpage
+\thispagestyle{abbreviations}
+\pagestyle{abbreviations}
+\input{additionalPages/abbreviations}
+
+\newpage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\renewcommand{\thechapter}{A.\arabic{chapter}}
+\renewcommand{\thesection}{\thechapter.\arabic{section}}
+\renewcommand{\thesubsection}{\thesection.\arabic{subsection}}
+\renewcommand{\cftchapfont}{\bfseries}
+\renewcommand{\cftsecfont}{\bfseries}
+\renewcommand{\cftchappagefont}{\bfseries}
+\renewcommand{\cftsecpagefont}{\bfseries}
+
+
+%================== ACTUAL CHAPTERS START HERE ==============
+\newpage
+\customchapter{1}{\MakeUppercase{Introduction and Overview}}
+\label{chap:introduction}
+\thispagestyle{chapterA2}
+\pagestyle{chapterA1}
+\input{chapters/chapter1/introduction}
+
+\newpage
+\customchapter{2}{\MakeUppercase{LITERATURE REVIEW}}
+\label{chap:literature}
+\thispagestyle{chapterA2}
+\pagestyle{chapterA2}
+\input{chapters/chapter2/literature_review}
+
+% \newpage
+% \customchapter{3}{\MakeUppercase{System Configuration}}
+% \label{chap:modeling}
+% \thispagestyle{chapterA3}
+% \pagestyle{chapterA3}
+% \input{chapters/chapter3/system_configuration}
+
+\newpage
+\customchapter{3}{\MakeUppercase{Control Strategies}}
+\label{chap:rl}
+\thispagestyle{chapterA3}
+\pagestyle{chapterA3}
+\input{chapters/chapter4/control_strategies}
+
+\newpage
+\customchapter{4}{\MakeUppercase{Modelling and Simulation}}
+\label{chap:ddpg}
+\thispagestyle{chapterA4}
+\pagestyle{chapterA4}
+\input{chapters/chapter5/modelling_and_simulation}
+
+\newpage
+\customchapter{5}{\MakeUppercase{Experimental Validation Framework}}
+\label{chap:td3}
+\thispagestyle{chapterA5}
+\pagestyle{chapterA5}
+\input{chapters/chapter6/experimental_validation_framework}
+
+\newpage
+\customchapter{6}{\MakeUppercase{Performance Evaluation and Results}}
+\label{chap:experimental}
+\thispagestyle{chapterA6}
+\pagestyle{chapterA6}
+\input{chapters/chapter7/performance_evaluation_and_results}
+
+% \newpage
+% \customchapter{8}{\MakeUppercase{Critical Discussions}}
+% \label{chap:results}
+% \thispagestyle{chapterA8}
+% \pagestyle{chapterA8}
+% \input{chapters/chapter8/critical_discussion}   
+
+\newpage
+\customchapter{7}{\MakeUppercase{Conclusions and Future Scope}}
+\label{chap:conclusions}
+\thispagestyle{chapterA7}
+\pagestyle{chapterA7}
+\input{chapters/chapter9/conclusion_and_future_scope}
+
+\newpage
+\thispagestyle{plain}
+\pagestyle{plain}
+\addcontentsline{toc}{chapter}{\textbf{LIST OF REFERENCES}}
+\bibliographystyle{IEEEtran}
+\bibliography{references/references}
+
+% NOTE: All references are managed in references/references.bib
+% Use BibTeX compilation: xelatex -> bibtex -> xelatex -> xelatex
+
+% ==================== APPENDICES ====================
+% NOTE: Appendices can be added here if needed for additional technical details,
+% derivations, code listings, or supplementary results.
+% Uncomment and expand the sections below as required.
+
+% \appendix
+%
+% \chapter{Mathematical Derivations}
+%
+% \section{DFIG d-q Transformation}
+% Detailed derivation of the Park transformation from abc to dq reference frame,
+% including inverse transformation and power invariance properties.
+%
+% \section{TD3 Convergence Analysis}
+% Theoretical analysis of TD3 convergence properties, including conditions
+% for policy convergence and value function approximation error bounds.
+%
+% \chapter{Neural Network Architectures}
+%
+% \section{Network Layer Details}
+% Complete specifications of actor and critic network architectures including
+% layer dimensions, activation functions, initialization schemes, and regularization.
+%
+% \section{Activation Function Analysis}
+% Comparative analysis of ReLU, tanh, sigmoid, and other activation functions
+% for power system control applications.
+%
+% \chapter{Additional Simulation Results}
+%
+% \section{Extended Test Scenarios}
+% Comprehensive results under additional operating conditions including
+% extreme wind speeds, variable solar irradiance profiles, and grid disturbances.
+%
+% \section{Sensitivity Analysis}
+% Detailed sensitivity analysis examining controller performance degradation
+% under parameter uncertainties and model mismatches.
+%
+% \chapter{Implementation Code}
+%
+% \section{TD3 Algorithm Implementation}
+% Complete Python implementation of TD3 training algorithm including
+% experience replay, target networks, and hyperparameter configurations.
+%
+% \section{MATLAB/Simulink Models}
+% Description and diagrams of MATLAB/Simulink models used for
+% system simulation and OPAL-RT HIL deployment.
+
+% ==================== LIST OF PUBLICATIONS ====================
+\chapter*{List of Publications}
+\addcontentsline{toc}{chapter}{List of Publications}
+
+\section*{Journal Publications}
+
+\begin{enumerate}
+    \item R.~Pandey, S.~Bose, and P.~Dwivedi, ``DDPG algorithm for power optimization and control of solar PV-integrated DFIG wind energy systems,'' \textit{Scientific Reports}, vol.~15, Article no.~39212, 2025. DOI: 10.1038/s41598-025-19818-6. \textbf{(Published)}
+
+    \item R.~Pandey, M.~Aldobali, S.~Bose, P.~Dwivedi, Y.~Alward, and S.~Negi, ``Twin-delayed deep deterministic policy gradient for enhanced power optimization in solar PV-integrated DFIG wind energy systems,'' \textit{Scientific Reports}, 2025. \textbf{(Under Review)}
+\end{enumerate}
+
+\section*{Conference Publications}
+
+\begin{enumerate}
+    \item R.~Pandey, S.~Bose, P.~Dwivedi, and S.~Negi, ``Real-time performance investigation of a solar PV integrated DFIG system,'' in \textit{Proc. IEEE 10th Power India International Conference (PIICON)}, New Delhi, India, Nov. 2022, pp.~1--6. DOI: 10.1109/PIICON56320.2022.10045115.
+\end{enumerate}
+\end{document}

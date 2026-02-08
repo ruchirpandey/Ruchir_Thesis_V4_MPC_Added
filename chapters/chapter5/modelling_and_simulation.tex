@@ -1,0 +1,865 @@
+% ============================================================
+% CHAPTER 5: UNIFIED DEEP REINFORCEMENT LEARNING CONTROL METHODOLOGY
+% ============================================================
+% This chapter presents the unified deep RL control framework for the
+% DFIG-Solar PV hybrid system, covering both DDPG and TD3 implementations.
+% ============================================================
+
+% ------------------------------------------------------------
+% SECTION 5.1: COMMON FRAMEWORK
+% ------------------------------------------------------------
+\section{System Architecture}
+
+\subsection{Overall Configuration}
+
+The hybrid system consists of a DFIG-based wind turbine with its stator connected to the grid and a back-to-back converter at its rotor. A solar PV array is integrated at the common DC link between the RSC and GSC (Figure~\ref{fig:system_architecture}).
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/Updated_DFIG_Topology.png}
+    \caption{System architecture of DFIG-Solar PV hybrid system with DDPG-based unified controller showing rotor side converter (RSC), grid side converter (GSC), and solar PV integration at DC link}
+    \label{fig:system_architecture}
+\end{figure}
+
+The advanced control configuration with TD3-based controller is shown in Figure~\ref{fig:td3_system_architecture}, which illustrates the twin-delayed deep deterministic policy gradient approach for enhanced power optimization.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/dpfig_mod.drawio.png}
+    \caption{TD3-based system architecture with twin critic networks for improved stability and overestimation bias mitigation in DFIG-Solar PV hybrid system}
+    \label{fig:td3_system_architecture}
+\end{figure}
+
+\textbf{Key Components:} The system comprises five main components. The DFIG wind turbine converts mechanical wind energy to electrical energy, while the Rotor Side Converter (RSC) controls rotor currents and electromagnetic torque. The Grid Side Converter (GSC) regulates DC link voltage and manages grid power exchange, and the Solar PV array injects variable DC current based on solar irradiation. The DC link capacitor provides an energy buffer between the converters.
+
+This topology eliminates the need for separate DC-DC boost converters and inverters for the PV system, reducing system complexity and cost.
+
+\section{DFIG Mathematical Model}
+
+\subsection{Synchronously Rotating Reference Frame}
+
+The dynamic behavior of the DFIG is modeled in a synchronously rotating direct-quadrature ($d$-$q$) reference frame. This transformation converts three-phase AC machine dynamics into more tractable DC-like quantities in steady state. Recent work by \cite{Loulijat2024} demonstrates the effectiveness of novel power state models for DFIG control, while \cite{Salman2025} provides comprehensive analysis of DFIG-based hybrid solar-wind system optimization using advanced mathematical models.
+
+\subsection{Voltage Equations}
+
+The voltage equations for the DFIG in the $d$-$q$ frame are:
+
+\textbf{Stator Voltage Equations:}
+\begin{align}
+V_{qs} &= R_s i_{qs} + \frac{d\psi_{qs}}{dt} + \omega_s \psi_{ds} \label{eq:vqs} \\
+V_{ds} &= R_s i_{ds} + \frac{d\psi_{ds}}{dt} - \omega_s \psi_{qs} \label{eq:vds}
+\end{align}
+
+\textbf{Rotor Voltage Equations:}
+\begin{align}
+V_{qr} &= R_r i_{qr} + \frac{d\psi_{qr}}{dt} + (\omega_s - \omega_r) \psi_{dr} \label{eq:vqr} \\
+V_{dr} &= R_r i_{dr} + \frac{d\psi_{dr}}{dt} - (\omega_s - \omega_r) \psi_{qr} \label{eq:vdr}
+\end{align}
+
+\subsection{Flux Linkage Equations}
+
+The flux linkages are expressed as:
+\begin{align}
+\psi_{qs} &= L_s i_{qs} + L_m i_{qr} \\
+\psi_{ds} &= L_s i_{ds} + L_m i_{dr} \\
+\psi_{qr} &= L_r i_{qr} + L_m i_{qs} \\
+\psi_{dr} &= L_r i_{dr} + L_m i_{ds}
+\end{align}
+
+\subsection{Power Equations}
+
+The active and reactive power at the stator terminals are:
+\begin{align}
+P_s &= \frac{3}{2}(v_{ds} i_{ds} + v_{qs} i_{qs}) \\
+Q_s &= \frac{3}{2}(v_{qs} i_{ds} - v_{ds} i_{qs})
+\end{align}
+
+\subsection{Simplified State-Space Model}
+
+For control design, simplified current dynamics are derived:
+\begin{align}
+\dot{i}_{qs} &= \frac{\omega_b}{L'_s}\left[-R_1 i_{qs} + \omega_s L'_s i_{ds} + \frac{\omega_r}{\omega_s} e'_{qs} - \frac{1}{T_r \omega_s} e'_{ds} - v_{qs} + \frac{L_m}{L_{rr}} v_{qr}\right] \\
+\dot{i}_{ds} &= \frac{\omega_b}{L'_s}\left[-\omega_s L'_s i_{qs} - R_1 i_{ds} + \frac{1}{T_r \omega_s} e'_{qs} + \frac{\omega_r}{\omega_s} e'_{ds} - v_{ds} + \frac{L_m}{L_{rr}} v_{dr}\right]
+\end{align}
+where $L'_s = L_s - \frac{L_m^2}{L_r}$ is transient stator inductance and $R_1 = R_s + \frac{L_m^2}{L_r^2} R_r$.
+
+\subsection{Mechanical Dynamics}
+
+The rotor speed dynamics are governed by:
+\begin{equation}
+\dot{\omega}_r = \frac{1}{J}(T_m - T_e - B\omega_r)
+\end{equation}
+where $J$ is moment of inertia, $T_m$ is mechanical torque, $T_e$ is electromagnetic torque, and $B$ is friction coefficient.
+
+\section{Solar PV Array Modeling}
+
+\subsection{Single-Diode Equivalent Circuit}
+
+The solar PV array is represented using the single-diode equivalent circuit model \cite{Celik2025}:
+\begin{equation}
+I = I_{ph} - I_s\left(e^{\frac{V + IR_{s,pv}}{n_s V_t}} - 1\right) - \frac{V + IR_{s,pv}}{R_p}
+\label{eq:pv_model}
+\end{equation}
+where $I_{ph}$ is the photocurrent proportional to solar irradiance, $I_s$ is the reverse saturation current, $R_{s,pv}$ is the series resistance, $R_p$ is the parallel (shunt) resistance, $n_s$ is the number of cells in series, and $V_t = \frac{kT}{q}$ is the thermal voltage.
+
+Accurate parameter extraction is critical for PV system modeling. Recent advances include hybrid optimization approaches \cite{Abdulrazzaq2025} combining genetic algorithms and particle swarm optimization, enhanced generalized normal distribution optimization \cite{Ghetas2024}, and prairie dog optimization algorithms \cite{Izci2024}, all demonstrating superior accuracy compared to conventional methods. For hybrid PV systems with adaptive control, AI-based approaches \cite{Mamodiya2025} offer significant potential for enhanced performance.
+
+\subsection{Irradiance and Temperature Dependence}
+
+The photocurrent varies with solar irradiance $G$ and cell temperature $T$:
+\begin{equation}
+I_{ph} = \left[I_{ph,ref} + \alpha_I (T - T_{ref})\right] \frac{G}{G_{ref}}
+\end{equation}
+
+\section{DC Link Dynamics}
+
+\subsection{Power Balance Equation}
+
+The DC link voltage dynamics are governed by power balance \cite{AlWesabi2024,Slimene2025}:
+\begin{equation}
+C \frac{dv_{dc}}{dt} = i_{pv} + i_{r,dc} - i_{g,dc}
+\label{eq:dc_link}
+\end{equation}
+
+Fast and accurate DC-link voltage control is critical for stable operation of hybrid renewable energy systems. Recent work demonstrates that linear active disturbance rejection control (ADRC) combined with hybrid optimization algorithms can achieve superior performance \cite{AlWesabi2024}, with response times significantly faster than conventional PI control. Advanced control strategies for DC-link stabilization in hybrid systems \cite{Slimene2025} show promise for improved grid stability and power quality under varying renewable generation conditions.
+
+\subsection{Converter DC Currents}
+
+The DC currents from the converters depend on their respective AC side power flows:
+\begin{align}
+i_{r,dc} &= \frac{P_{RSC}}{v_{dc}} = \frac{3}{2v_{dc}}(v_{dr} i_{dr} + v_{qr} i_{qr}) \\
+i_{g,dc} &= \frac{P_{GSC}}{v_{dc}} = \frac{3}{2v_{dc}}(v_{gd} i_{gd} + v_{gq} i_{gq})
+\end{align}
+
+\section{Grid Side Converter Model}
+
+The GSC connects the DC link to the grid through an RL filter:
+\begin{align}
+v_{gd} &= R_g i_{gd} + L_g \frac{di_{gd}}{dt} - \omega_s L_g i_{gq} + e_{gd} \\
+v_{gq} &= R_g i_{gq} + L_g \frac{di_{gq}}{dt} + \omega_s L_g i_{gd} + e_{gq}
+\end{align}
+
+Grid-side active and reactive power:
+\begin{align}
+P_g &= \frac{3}{2}(e_{gd} i_{gd} + e_{gq} i_{gq}) \\
+Q_g &= \frac{3}{2}(e_{gq} i_{gd} - e_{gd} i_{gq})
+\end{align}
+
+\section{Complete System State-Space Model}
+
+\subsection{State Vector Definition}
+
+The complete 11-dimensional state vector is:
+\begin{equation}
+\mathbf{s} = [i_{qs}, i_{ds}, i_{qr}, i_{dr}, v_{dc}, i_{pv}, P_s, Q_s, P_g, Q_g, \theta_r]^T
+\label{eq:state_vector}
+\end{equation}
+
+\subsection{System Dynamics}
+
+The system dynamics are:
+\begin{equation}
+\dot{\mathbf{s}} = f(\mathbf{s}, \mathbf{a})
+\end{equation}
+where $\mathbf{a} = [v_{qr}, v_{dr}, v_{qg}, v_{dg}]^T$ is the control action vector.
+
+\section{System Parameters}
+
+The simulation parameters are listed in Table~\ref{tab:system_params}.
+
+\begin{table}[htbp]
+\centering
+\caption{System simulation parameters}
+\label{tab:system_params}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Parameter} & \textbf{Value} & \textbf{Unit} \\
+\midrule
+DFIG rated power & 7.5 & kW \\
+Stator voltage & 415 & V \\
+Stator current & 8 & A \\
+Rotor current & 12 & A \\
+DC link voltage & 230 & V \\
+DC link capacitance & 1000 & $\mu$F \\
+Nominal wind speed & 9 & m/s \\
+Solar PV rated power & 500 & W \\
+PV open circuit voltage & 108 & V \\
+PV rated current & 5 & A \\
+Filter inductance & 5 & mH \\
+Filter capacitance & 1000 & $\mu$F \\
+Sampling time & 1 & ms \\
+\bottomrule
+\end{tabular}
+\end{table}
+\section{Unified Control Framework}
+\label{sec:unified_framework}
+
+This section presents common design elements shared by DDPG and TD3: state space, action space, system dynamics, reward function, and training infrastructure.
+
+\subsection{State Space Design}
+\label{subsec:state_space}
+
+11-dimensional state vector for complete observability:
+
+\begin{equation}
+\mathbf{s} = [i_{qs}, i_{ds}, i_{qr}, i_{dr}, v_{dc}, i_{pv}, P_s, Q_s, P_g, Q_g, \theta_r]^T \in \mathbf{R}^{11}
+\label{eq:state_vector}
+\end{equation}
+
+\textbf{Components:} DFIG electrical ($i_{qs}, i_{ds}, i_{qr}, i_{dr}$), DC link/PV ($v_{dc}, i_{pv}$), power flow ($P_s, Q_s, P_g, Q_g$), mechanical ($\theta_r$). This captures wind turbine, PV, and grid subsystem couplings for coordinated control.
+
+\subsection{Action Space Design}
+\label{subsec:action_space}
+
+4-dimensional continuous action vector: d-q axis voltage references for RSC and GSC:
+
+\begin{equation}
+\mathbf{a} = [v_{qr}, v_{dr}, v_{qg}, v_{dg}]^T \in \mathbf{R}^4
+\label{eq:action_vector}
+\end{equation}
+
+\textbf{Components:} RSC ($v_{qr}, v_{dr}$): torque and rotor reactive power. GSC ($v_{qg}, v_{dg}$): DC link voltage and grid power.
+
+\textbf{Scaling:} NN outputs $[-1, 1]$ (tanh) scaled to physical limits:
+
+\begin{equation}
+v_{actual} = v_{min} + \frac{(a_{normalized} + 1)}{2} \times (v_{max} - v_{min})
+\label{eq:action_scaling}
+\end{equation}
+
+Typical: $v_{min} = -400$ V, $v_{max} = +400$ V. Continuous actions enable fine-grained control, minimizing electrical stress.
+
+\subsection{System Dynamics Representation}
+\label{subsec:system_dynamics}
+
+System state evolution governed by nonlinear differential equations (Chapter 3):
+
+\begin{equation}
+\dot{\mathbf{s}} = f(\mathbf{s}, \mathbf{a}) = [\dot{i}_{qs}, \dot{i}_{ds}, \dot{i}_{qr}, \dot{i}_{dr}, \dot{\omega}_r, \dot{v}_{dc}, \dot{i}_{pv}, \dot{P}_s, \dot{Q}_s, \dot{P}_g, \dot{Q}_g, \dot{\theta}_r]^T
+\label{eq:system_dynamics}
+\end{equation}
+
+\textbf{Key Components:}
+
+\paragraph{Stator Currents:}
+
+\begin{equation}
+\dot{i}_{qs} = \frac{\omega_b}{L'_s} \left( -R_1 i_{qs} + \omega_s L'_s i_{ds} + \frac{\omega_r}{\omega_s} e'_{qs} - \frac{1}{T_r \omega_s} e'_{ds} - v_{qs} + \frac{L_m}{L_{rr}} v_{qr} \right)
+\label{eq:iqs_dot}
+\end{equation}
+
+\begin{equation}
+\dot{i}_{ds} = \frac{\omega_b}{L'_s} \left( -\omega_s L'_s i_{qs} - R_1 i_{ds} + \frac{1}{T_r \omega_s} e'_{qs} + \frac{\omega_r}{\omega_s} e'_{ds} - v_{ds} + \frac{L_m}{L_{rr}} v_{dr} \right)
+\label{eq:ids_dot}
+\end{equation}
+
+\paragraph{Rotor Speed:}
+\begin{equation}
+\dot{\omega}_r = \frac{1}{J} (T_m - T_e - B\omega_r)
+\label{eq:omega_r_dot}
+\end{equation}
+
+\paragraph{DC Link Voltage:}
+\begin{equation}
+\dot{v}_{dc} = \frac{1}{C} (i_{pv} + i_{r,dc} - i_{g,dc})
+\label{eq:vdc_dot}
+\end{equation}
+
+These coupled nonlinear dynamics motivate deep RL for learning optimal control from system interactions.
+
+\subsection{Reward Function Structure}
+\label{subsec:reward_function}
+
+Multi-objective quadratic penalty balancing power tracking, voltage regulation, and stability.
+
+\subsubsection{RSC Reward}
+
+\begin{equation}
+r_{RSC} = -(w_1 (\omega_r - \omega_r^*)^2 + w_2 (P_s - P_s^*)^2 + w_3 (Q_s - Q_s^*)^2)
+\label{eq:r_rsc}
+\end{equation}
+
+\subsubsection{GSC Reward}
+
+\begin{equation}
+r_{GSC} = -(w_4 (v_{dc} - v_{dc}^*)^2 + w_5 (P_g - P_g^*)^2 + w_6 (Q_g - Q_g^*)^2)
+\label{eq:r_gsc}
+\end{equation}
+
+\subsubsection{Total Reward}
+
+\begin{equation}
+r = r_{RSC} + r_{GSC}
+\label{eq:total_reward}
+\end{equation}
+
+This unified formulation simultaneously optimizes both converters via shared DC link.
+
+\subsubsection{Reward Weights}
+
+Baseline weights (determined experimentally):
+\begin{itemize}
+    \item $w_1 = 0.4$ (frequency regulation)
+    \item $w_2 = 0.3$ (rotor active power tracking)
+    \item $w_3 = 0.3$ (rotor reactive power control)
+    \item $w_4 = 0.2$--$0.3$ (DC link voltage regulation)
+    \item $w_5 = 0.2$--$0.4$ (grid active power)
+    \item $w_6 = 0.2$--$0.4$ (grid reactive power)
+\end{itemize}
+
+Minor $w_4$, $w_5$, $w_6$ variations between DDPG/TD3 (Sections~\ref{subsec:ddpg_rewards}, \ref{subsec:td3_rewards}).
+
+\subsection{Neural Network Foundation}
+\label{subsec:nn_foundation}
+
+DDPG and TD3 use deep neural networks for actor/critic approximation.
+
+\subsubsection{Actor Network}
+
+Maps states to actions: $\mu(s|\theta_\mu) = \tanh(W_n\sigma(W_{n-1} \cdots \sigma(W_1 s + b_1) \cdots + b_{n-1}) + b_n)$ where $\sigma(x) = \max(0, x)$ (ReLU).
+
+\textbf{Architecture:} [11]-[400]-[300]-[4] with ReLU hidden, tanh output. Parameters: $N_{params,actor} = 125,504$.
+
+\subsubsection{Critic Network}
+
+Evaluates state-action pairs: $Q(s,a|\theta_Q) = W'_n\sigma(W'_{n-1} \cdots \sigma(W'_1[s,a] + b'_1) \cdots + b'_{n-1}) + b'_n$ where $[s,a]$ concatenates state/action.
+
+\textbf{Architecture:} [15]-[400]-[300]-[1] with ReLU hidden, linear output. Parameters: $N_{params,critic} = 126,701$. DDPG uses 1 critic, TD3 uses 2 (Section~\ref{subsec:td3_critics}).
+
+\subsection{Training Infrastructure}
+\label{subsec:training_infrastructure}
+
+\subsubsection{Platform}
+
+\textbf{Software:} Python 3.8, TensorFlow 2.10.0/Keras, NumPy 1.23.0, OpenAI Gym 0.26.0, MATLAB R2021b (HIL).
+
+\textbf{Hardware:} Google Colab Pro (NVIDIA Tesla T4, 16 GB VRAM) for training; OPAL-RT OP5700 for HIL validation.
+
+\textbf{Recent Advances:} MATLAB/Simulink optimization \cite{Mauludin2025,Savio2025}, digital twins \cite{AlShetwi2025}, techno-economic frameworks \cite{Ayua2024}, multi-objective simulation \cite{Jacob2025}.
+
+\subsubsection{Experience Replay}
+
+Replay buffer $\mathcal{B} = \{(s_t, a_t, r_t, s_{t+1})\}_{t=1:T}$ stores transitions. Random mini-batches sampled to break temporal correlations.
+
+\textbf{Configuration:} Capacity $1 \times 10^6$, batch size 64, uniform sampling.
+
+\subsubsection{Target Networks}
+
+Soft updates stabilize learning:
+\begin{equation}
+\theta'_Q \leftarrow \tau \theta_Q + (1-\tau) \theta'_Q, \quad
+\theta'_\mu \leftarrow \tau \theta_\mu + (1-\tau) \theta'_\mu
+\label{eq:target_updates}
+\end{equation}
+where $\tau \ll 1$ prevents rapid target changes.
+
+\subsubsection{Curriculum Learning}
+
+Gradual task difficulty increase: \textbf{Phase 1 (Eps 1--100):} Random exploration, buffer population. \textbf{Phase 2 (101--500):} DC link voltage only ($r = -(v_{dc} - v_{dc}^*)^2$). \textbf{Phase 3 (501--1000):} DC link + RSC power ($r = r_{RSC} + r_{GSC,voltage}$). \textbf{Phase 4 (1001+):} Full multi-objective (Eq.~\ref{eq:total_reward}). Essential for convergence.
+
+\subsection{Summary of Common Elements}
+
+These elements---state/action spaces, dynamics, reward, networks, infrastructure---form the unified foundation for DDPG and TD3.
+
+
+% ------------------------------------------------------------
+% SECTION 5.2: DDPG IMPLEMENTATION
+% ------------------------------------------------------------
+
+\section{Deep Deterministic Policy Gradient (DDPG) Implementation}
+\label{sec:ddpg_implementation}
+
+DDPG algorithm for hybrid DFIG-PV system \cite{Pandey2025DDPG}: actor-critic for continuous control with deterministic policy gradients.
+
+\subsection{DDPG Overview}
+\label{subsec:ddpg_overview}
+
+Extends DQN to continuous actions. \textbf{Core Principles:} Deterministic policy (simplifies gradient), off-policy learning (replay buffer, sample efficiency), actor-critic (actor proposes, critic evaluates), continuous action space (direct voltage commands, fine-grained control).
+
+\subsection{Single Critic Architecture}
+\label{subsec:ddpg_critic}
+
+Single critic $Q_\phi(s,a)$ estimates action-value: $Q^\pi(s,a) = E\left[ \sum_{t=0}^{\infty} \gamma^t r_t \mid s_0=s, a_0=a, \pi \right]$. Structure per Section~\ref{subsec:nn_foundation}.
+
+\subsection{Policy Gradient}
+\label{subsec:ddpg_policy_gradient}
+
+Deterministic policy gradient: $\nabla_{\theta_\mu} J = E_{s \sim \rho^\beta} \left[ \nabla_a Q(s,a|\phi) \big|_{a=\mu(s)} \nabla_{\theta_\mu} \mu(s|\theta_\mu) \right]$.
+
+Mini-batch approximation: $\nabla_{\theta_\mu} J \approx \frac{1}{N} \sum_{i=1}^{N} \nabla_a Q(s_i,a|\phi) \big|_{a=\mu(s_i)} \nabla_{\theta_\mu} \mu(s_i|\theta_\mu)$.
+
+\subsection{Target Value Computation}
+\label{subsec:ddpg_target}
+
+The critic is trained using temporal difference learning with target values computed from the target networks:
+
+\begin{equation}
+y_i = r_i + \gamma Q'(s_{i+1}, \mu'(s_{i+1}|\theta'_\mu)|\phi')
+\label{eq:ddpg_target}
+\end{equation}
+
+The critic loss function is then:
+
+\begin{equation}
+L(\phi) = \frac{1}{N} \sum_{i=1}^{N} (y_i - Q(s_i, a_i|\phi))^2
+\label{eq:ddpg_critic_loss}
+\end{equation}
+
+\subsection{Exploration Strategy}
+\label{subsec:ddpg_exploration}
+
+To ensure sufficient exploration during training, DDPG adds noise to the deterministic policy:
+
+\begin{equation}
+a_t = \mu(s_t|\theta_\mu) + \mathcal{N}_t
+\label{eq:ddpg_exploration}
+\end{equation}
+
+where $\mathcal{N}_t$ is noise generated by an Ornstein-Uhlenbeck process:
+
+\begin{equation}
+d\mathcal{N}_t = \theta_{OU}(\mu_{OU} - \mathcal{N}_t)dt + \sigma_{OU} dW_t
+\label{eq:ou_process}
+\end{equation}
+
+with parameters $\theta_{OU} = 0.15$ (mean reversion rate), $\mu_{OU} = 0.0$ (long-term mean), and $\sigma_{OU} = 0.2$ (volatility).
+
+The Ornstein-Uhlenbeck process generates temporally correlated noise, which is more suitable for physical control systems than uncorrelated Gaussian noise.
+
+\subsection{DDPG Training Procedure}
+
+The complete DDPG training procedure follows these steps:
+
+\textbf{Initialization:}
+\begin{enumerate}
+    \item Initialize actor $\mu(s|\theta_\mu)$ and critic $Q(s,a|\phi)$ with random weights
+    \item Initialize target networks: $\theta'_\mu \leftarrow \theta_\mu$, $\phi' \leftarrow \phi$
+    \item Initialize replay buffer $\mathcal{B}$ with capacity $N_{buffer}$
+    \item Initialize Ornstein-Uhlenbeck noise process $\mathcal{N}$
+\end{enumerate}
+
+\textbf{Training Loop (for each episode):}
+\begin{enumerate}
+    \item Reset environment and receive initial state $s_1$
+    \item Reset noise process $\mathcal{N}$
+    \item For each timestep $t = 1$ to $T$:
+    \begin{enumerate}
+        \item Select action with exploration: $a_t = \mu(s_t|\theta_\mu) + \mathcal{N}_t$
+        \item Clip action to valid range: $a_t \leftarrow \text{clip}(a_t, a_{low}, a_{high})$
+        \item Execute action $a_t$ in environment
+        \item Observe reward $r_t$ and next state $s_{t+1}$
+        \item Store transition $(s_t, a_t, r_t, s_{t+1})$ in $\mathcal{B}$
+        \item If $|\mathcal{B}| \geq N_{batch}$:
+        \begin{enumerate}
+            \item Sample random mini-batch of $N_{batch}$ transitions from $\mathcal{B}$
+            \item Compute target Q-values: $y_i = r_i + \gamma Q'(s_{i+1}, \mu'(s_{i+1}|\theta'_\mu)|\phi')$
+            \item Update critic by minimizing: $L = \frac{1}{N_{batch}}\sum_i (y_i - Q(s_i,a_i|\phi))^2$
+            \item Update actor using policy gradient
+            \item Update target networks with soft updates: $\phi' \leftarrow \tau \phi + (1-\tau)\phi'$ and $\theta'_\mu \leftarrow \tau \theta_\mu + (1-\tau)\theta'_\mu$
+        \end{enumerate}
+    \end{enumerate}
+\end{enumerate}
+
+\subsection{DDPG Hyperparameters}
+\label{subsec:ddpg_hyperparameters}
+
+\textbf{Learning:} Discount factor $\gamma = 0.99$, actor learning rate $1 \times 10^{-4}$, critic learning rate $1 \times 10^{-3}$, target update rate $\tau = 0.001$.
+
+\textbf{Training:} Batch size 64, replay buffer $1 \times 10^6$, Ornstein-Uhlenbeck noise ($\theta = 0.15$, $\sigma = 0.2$).
+
+\subsection{DDPG Reward Weights}
+\label{subsec:ddpg_rewards}
+
+\textbf{RSC weights:} $w_1 = 0.4$, $w_2 = 0.3$, $w_3 = 0.3$.
+
+\textbf{GSC weights:} $w_4 = 0.3$, $w_5 = 0.2$, $w_6 = 0.2$.
+
+\subsection{DDPG Training Configuration}
+\label{subsec:ddpg_training_config}
+
+\textbf{Episodes:} 2000 episodes × 1000 steps each.
+
+\textbf{Curriculum:} Warmup (episodes 1--100), simplified task (101--500), intermediate (501--1000), full multi-objective (1001--2000).
+
+\textbf{Exploration:} Minimum noise 0.1, decay factor 0.995 per episode.
+
+\textbf{Convergence:} Policy stable within 0.5\% for 100 consecutive episodes. Total training time ≈8 hours.
+
+\subsection{DDPG Implementation Summary}
+\label{subsec:ddpg_summary}
+
+Solid baseline for DFIG-PV control. Key characteristics:
+
+\textbf{Strengths:} Simple single-critic architecture, efficient training (≈8 hours), good power tracking, proven track record.
+
+\textbf{Limitations:} Overestimation bias (Section~\ref{subsec:td3_motivation}), hyperparameter sensitivity, aggressive control/overshoot. These motivate TD3 development.
+
+
+% ------------------------------------------------------------
+% SECTION 5.3: TD3 IMPLEMENTATION
+% ------------------------------------------------------------
+
+\section{Twin-Delayed Deep Deterministic Policy Gradient (TD3) Implementation}
+\label{sec:td3_implementation}
+
+TD3 implementation \cite{Pandey2025TD3} addresses DDPG limitations via three innovations.
+
+\subsection{Motivation: DDPG Limitations}
+\label{subsec:td3_motivation}
+
+\subsubsection{Overestimation Bias}
+
+DDPG's single critic prone to bias: $E[Q_\phi(s,a)] \geq Q^{\pi}(s,a)$. Causes:
+\begin{enumerate}
+    \item Function approximator errors
+    \item The max operation in Q-learning amplifies positive errors
+    \item The policy exploits these optimistic estimates
+\end{enumerate}
+
+\textbf{Consequences for Power System Control:}
+
+This overestimation bias has significant ramifications for power system control. The actor tends to select overly aggressive control actions based on optimistically biased value estimates, which results in power overshoot and oscillations. The DC link voltage becomes less stable due to these aggressive control commands, creating a risk of component stress and potential damage to the power electronic converters. Collectively, these effects degrade overall system performance and reliability.
+
+\subsubsection{Policy-Value Coupling}
+
+In DDPG, the actor and critic are updated at every timestep, creating tight coupling between policy and value estimates. When the critic's estimates are still inaccurate (early in training or during environment changes), rapid policy updates can lead to the policy converging to local optima, brittle behavior that is highly sensitive to hyperparameters, and instability during online adaptation to changing operating conditions.
+
+These limitations are particularly problematic for safety-critical power system applications where control stability is paramount.
+
+\subsection{TD3 Algorithmic Innovations}
+\label{subsec:td3_innovations}
+
+TD3 introduces three key mechanisms to address DDPG's limitations while maintaining its advantages for continuous control.
+
+\subsubsection{Innovation 1: Clipped Double Q-Learning}
+\label{subsubsec:clipped_double_q}
+
+TD3 employs two independent critic networks $Q_{\phi_1}(s,a)$ and $Q_{\phi_2}(s,a)$ and uses the minimum of their estimates for computing target values:
+
+\begin{equation}
+y = r + \gamma \min_{i=1,2} Q'_{\phi_i}(s', \tilde{a}')
+\label{eq:clipped_double_q}
+\end{equation}
+
+\textbf{Theoretical Justification:}
+
+If both critics independently overestimate:
+\begin{align}
+Q_{\phi_1}(s,a) &\geq Q^{\pi}(s,a) + \epsilon_1 \\
+Q_{\phi_2}(s,a) &\geq Q^{\pi}(s,a) + \epsilon_2
+\end{align}
+
+Then:
+\begin{equation}
+\min(Q_{\phi_1}, Q_{\phi_2}) \approx Q^{\pi}(s,a) + \min(\epsilon_1, \epsilon_2)
+\end{equation}
+
+Since independent errors are unlikely to be large simultaneously, $\min(\epsilon_1, \epsilon_2) < \max(\epsilon_1, \epsilon_2)$, producing a more conservative (and reliable) estimate.
+
+\textbf{Benefit for Power System Control:}
+
+This clipped double Q-learning mechanism provides substantial benefits for power system control, yielding more conservative value estimates that guide the actor to select safer and less aggressive actions. Consequently, power overshoot is reduced and DC link voltage stability is significantly improved compared to standard DDPG.
+
+\subsubsection{Innovation 2: Target Policy Smoothing}
+\label{subsubsec:target_smoothing}
+
+TD3 adds clipped noise to the target action before computing target Q-values:
+
+\begin{equation}
+\tilde{a}' = \text{clip}\left(\mu'(s'|\theta'_\mu) + \text{clip}(\epsilon, -c, c), a_{low}, a_{high}\right)
+\label{eq:target_smoothing}
+\end{equation}
+
+where $\epsilon \sim \mathcal{N}(0, \sigma)$ is Gaussian noise.
+
+\textbf{Rationale:}
+
+This noise injection acts as a regularization technique that smooths the value landscape by considering actions near the policy output, prevents the actor from exploiting narrow and brittle peaks in the Q-function, and encourages learning robust policies that generalize well to nearby state-action regions.
+
+\textbf{Hyperparameters:}
+
+The target policy smoothing employs a noise standard deviation of $\sigma = 0.2$ and clips the noise to a range of $c = 0.5$.
+
+The inner clip constrains noise magnitude to $[-c, c]$, while the outer clip ensures the final action remains within valid physical bounds $[a_{low}, a_{high}]$.
+
+\subsubsection{Innovation 3: Delayed Policy Updates}
+\label{subsubsec:delayed_updates}
+
+TD3 updates the actor network and target networks less frequently than the critic networks:
+
+\begin{equation}
+\text{Update policy and targets only every } d \text{ critic updates}
+\label{eq:delayed_updates}
+\end{equation}
+
+\textbf{Procedure:}
+\begin{enumerate}
+    \item Update both critics at every timestep
+    \item Update actor only every $d$ timesteps (typically $d=2$)
+    \item Update target networks only when actor is updated
+\end{enumerate}
+
+\textbf{Benefit:}
+
+This decoupling strategy allows the critics to converge toward more accurate value estimates before the policy adjusts, reduces variance in policy gradient estimates, enables more stable learning overall, and decreases sensitivity to critic approximation errors.
+
+By waiting for the critics to provide better guidance, the actor avoids premature convergence based on noisy value estimates.
+
+\subsection{Twin Critic Architecture}
+\label{subsec:td3_critics}
+
+TD3 employs two structurally identical but independently initialized critic networks:
+
+\textbf{Critic 1:} $Q_{\phi_1}(s,a)$ with parameters $\phi_1 = \{W^{(1)}_i, b^{(1)}_i\}$
+
+\textbf{Critic 2:} $Q_{\phi_2}(s,a)$ with parameters $\phi_2 = \{W^{(2)}_i, b^{(2)}_i\}$
+
+Both critics follow the architecture described in Section~\ref{subsec:nn_foundation}, processing a 15-dimensional input formed by concatenating 11 states and 4 actions, passing through a first hidden layer of 400 neurons with ReLU activation and a second hidden layer of 300 neurons with ReLU activation, and producing a single scalar Q-value with linear activation.
+
+\textbf{Total TD3 Critic Parameters:}
+\begin{equation}
+N_{params,TD3\_critics} = 2 \times 126,701 = 253,402
+\end{equation}
+
+This is exactly double the DDPG critic parameters, representing the additional computational cost.
+
+\subsection{TD3 Target Value Computation}
+\label{subsec:td3_target_computation}
+
+The target value for critic training incorporates all three TD3 innovations:
+
+\begin{equation}
+y_i = r_i + \gamma \min_{j=1,2} Q'_{\phi_j}\left(s_{i+1}, \text{clip}\left(\mu'(s_{i+1}|\theta'_\mu) + \text{clip}(\epsilon, -c, c), a_{low}, a_{high}\right)\right)
+\label{eq:td3_target_full}
+\end{equation}
+
+\textbf{Step-by-step computation:}
+\begin{enumerate}
+    \item Target actor produces action: $\mu'(s_{i+1}|\theta'_\mu)$
+    \item Add clipped noise: $\tilde{a}' = \mu'(s_{i+1}) + \text{clip}(\epsilon, -c, c)$
+    \item Ensure physical bounds: $\tilde{a}' = \text{clip}(\tilde{a}', a_{low}, a_{high})$
+    \item Evaluate with both target critics: $Q'_{\phi_1}(s_{i+1}, \tilde{a}')$ and $Q'_{\phi_2}(s_{i+1}, \tilde{a}')$
+    \item Take minimum: $\min(Q'_{\phi_1}, Q'_{\phi_2})$
+    \item Add immediate reward: $y_i = r_i + \gamma \min(...)$
+\end{enumerate}
+
+\subsection{TD3 Policy Gradient with Delayed Updates}
+\label{subsec:td3_policy_gradient}
+
+The actor is updated using the policy gradient, but only every $d$ critic updates:
+
+\begin{equation}
+\nabla_{\theta_\mu} J = \frac{1}{N} \sum_{i=1}^{N} \nabla_a Q_{\phi_1}(s_i, a|_{a=\mu(s_i)}) \nabla_{\theta_\mu} \mu(s_i|\theta_\mu)
+\label{eq:td3_policy_gradient}
+\end{equation}
+
+\textit{Note: Only the first critic $Q_{\phi_1}$ is used for the policy gradient, as using both would double the gradient computation cost without significant benefit.}
+
+\subsection{TD3 Training Procedure}
+
+The complete TD3 training procedure follows these steps:
+
+\textbf{Initialization:}
+\begin{enumerate}
+    \item Initialize actor $\mu(s|\theta_\mu)$ and twin critics $Q_{\phi_1}, Q_{\phi_2}$ with random weights
+    \item Initialize target networks: $\theta'_\mu \leftarrow \theta_\mu$, $\phi'_1 \leftarrow \phi_1$, $\phi'_2 \leftarrow \phi_2$
+    \item Initialize replay buffer $\mathcal{B}$ with capacity $N_{buffer}$
+    \item Initialize update counter $k \leftarrow 0$
+\end{enumerate}
+
+\textbf{Training Loop (for each episode):}
+\begin{enumerate}
+    \item Reset environment and receive initial state $s_1$
+    \item For each timestep $t = 1$ to $T$:
+    \begin{enumerate}
+        \item Select action with exploration: $a_t = \mu(s_t|\theta_\mu) + \epsilon$, $\epsilon \sim \mathcal{N}(0, \sigma_{explore})$
+        \item Clip action to valid range: $a_t \leftarrow \text{clip}(a_t, a_{low}, a_{high})$
+        \item Execute action $a_t$ in environment
+        \item Observe reward $r_t$ and next state $s_{t+1}$
+        \item Store transition $(s_t, a_t, r_t, s_{t+1})$ in $\mathcal{B}$
+        \item If $|\mathcal{B}| \geq N_{batch}$:
+        \begin{enumerate}
+            \item Sample random mini-batch of $N_{batch}$ transitions from $\mathcal{B}$
+            \item Compute target actions with smoothing
+            \item Compute target Q-values with clipping: $y_i \leftarrow r_i + \gamma \min_{j=1,2} Q'_{\phi_j}(s_{i+1}, \tilde{a}_{i+1})$
+            \item Update both critics by minimizing losses
+            \item Increment counter: $k \leftarrow k + 1$
+            \item If $k \mod d = 0$ (Delayed policy update): Update actor using policy gradient (first critic only) and update target networks with soft updates
+        \end{enumerate}
+    \end{enumerate}
+\end{enumerate}
+
+\subsection{TD3 Hyperparameters}
+\label{subsec:td3_hyperparameters}
+
+\textbf{Learning:} Discount factor $\gamma = 0.99$, actor learning rate $8 \times 10^{-5}$, critic learning rate $7.5 \times 10^{-4}$, target update rate $\tau = 0.0008$.
+
+\textbf{Training:} Batch size 64, replay buffer $1 \times 10^6$.
+
+\textbf{TD3-Specific:} Policy delay $d = 2$, target policy noise $\tilde{\sigma} = 0.2$, noise clip $c = 0.5$, exploration noise $\sigma_{explore} = 0.1$.
+
+\subsection{TD3 Reward Weights}
+\label{subsec:td3_rewards}
+
+\textbf{RSC weights:} $w_1 = 0.4$, $w_2 = 0.3$, $w_3 = 0.3$.
+
+\textbf{GSC weights:} $w_4 = 0.2$, $w_5 = 0.4$, $w_6 = 0.4$.
+
+\subsection{TD3 Training Configuration}
+\label{subsec:td3_training_config}
+
+\textbf{Episodes:} 2500 episodes × 1600 steps each.
+
+\textbf{Curriculum:} Warmup (episodes 1--100), simplified task (101--300), intermediate (301--800), full multi-objective (801--2500).
+
+\textbf{Convergence:} Policy stable within 0.5\% for 200 consecutive episodes, achieved around episode 2000. Total training time ≈12 hours.
+
+\subsection{TD3 Implementation Summary}
+\label{subsec:td3_summary}
+
+The TD3 implementation addresses DDPG's limitations through three complementary mechanisms:
+
+\textbf{Strengths:}
+
+The TD3 implementation offers significant advantages including reduced overestimation bias through the use of twin critics, more stable learning enabled by delayed policy updates, improved generalization via target policy smoothing, superior performance on voltage regulation tasks, and more conservative and safer control actions that reduce the risk of equipment damage.
+
+\textbf{Trade-offs:}
+
+However, TD3 requires 50\% more training (12h vs 8h), double critic parameters (253K vs 127K), slightly complex implementation, additional hyperparameters ($d$, $\tilde{\sigma}$, $c$). Performance improvements justify adoption for safety-critical applications.
+
+
+% ------------------------------------------------------------
+% SECTION 5.4: IMPLEMENTATION COMPARISON
+% ------------------------------------------------------------
+
+\section{Comparative Implementation Analysis}
+\label{sec:implementation_comparison}
+
+Systematic DDPG vs TD3 comparison: architectural differences, computational trade-offs, deployment considerations.
+
+\subsection{Algorithmic Differences}
+\label{subsec:algo_differences}
+
+\textbf{DDPG vs TD3:} \textbf{Architecture:} DDPG (1 critic, 252K params), TD3 (2 critics, 379K params). \textbf{Value estimation:} DDPG single $Q_\phi(s,a)$ (overestimation prone), TD3 $\min(Q_{\phi_1}, Q_{\phi_2})$ (bias mitigated). \textbf{Policy:} DDPG updates every step (deterministic), TD3 every $d$ steps (smoothed noise). \textbf{Hyperparameters:} DDPG (actor LR=$1 \times 10^{-4}$, critic LR=$1 \times 10^{-3}$, $\tau$=0.001), TD3 (actor LR=$8 \times 10^{-5}$, critic LR=$7.5 \times 10^{-4}$, $\tau$=0.0008, delay $d$=2). \textbf{Training:} DDPG (2000 episodes, 1000 steps, 8h), TD3 (2500 episodes, 1600 steps, 12h). \textbf{Performance:} TD3 +50\% computational cost, higher stability, less aggressive control.
+
+\subsection{Computational Complexity Analysis}
+\label{subsec:computational_complexity}
+
+\subsubsection{Training Phase Complexity}
+
+\textbf{DDPG per training step:}
+
+Each DDPG training step requires $O(125,504)$ operations for the actor forward pass, $O(126,701)$ operations for the critic forward pass, $O(252,205)$ operations for backward passes through both networks, and $O(252,205)$ operations for target network updates, yielding a total per-step complexity of $O(631,611)$ operations.
+
+\textbf{TD3 per training step:}
+
+Each TD3 training step requires $O(125,504)$ operations for the actor forward pass, $O(253,402)$ operations for forward passes through both critics, $O(253,402)$ operations for backward passes through both critics, $O(125,504/d)$ operations for the actor backward pass (performed every $d$ steps), and $O(378,906/d)$ operations for target network updates (performed every $d$ steps), resulting in a total amortized per-step complexity of $O(884,765)$ operations.
+
+\textbf{Computational overhead:}
+\begin{equation}
+\text{TD3 overhead} = \frac{884,765 - 631,611}{631,611} \approx 40\%
+\end{equation}
+
+This aligns with observed training time increase (8 hours to 12 hours, or 50\% increase when accounting for longer episodes).
+
+\subsubsection{Deployment Phase Complexity}
+
+For real-time control (inference only):
+
+\textbf{DDPG inference:}
+\begin{equation}
+a = \mu(s|\theta_\mu) \rightarrow O(125,504) \text{ operations}
+\end{equation}
+
+\textbf{TD3 inference:}
+\begin{equation}
+a = \mu(s|\theta_\mu) \rightarrow O(125,504) \text{ operations}
+\end{equation}
+
+\textbf{Critical insight:} Both algorithms have \textbf{identical inference complexity}. The twin critics are only used during training, not during real-time deployment. This means TD3's computational overhead during training does not impact real-time control performance.
+
+\subsection{Memory Requirements}
+\label{subsec:memory_requirements}
+
+\begin{table}[htbp]
+\centering
+\caption{Memory requirements comparison}
+\label{tab:memory_comparison}
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Component} & \textbf{DDPG} & \textbf{TD3} \\
+\hline
+Actor network (online) & 502 KB & 502 KB \\
+Actor network (target) & 502 KB & 502 KB \\
+Critic network(s) (online) & 507 KB & 1.01 MB \\
+Critic network(s) (target) & 507 KB & 1.01 MB \\
+Replay buffer & 440 MB & 440 MB \\
+\hline
+\textbf{Total training memory} & \textbf{442 MB} & \textbf{443 MB} \\
+\textbf{Total deployment memory} & \textbf{502 KB} & \textbf{502 KB} \\
+\hline
+\end{tabular}
+\end{table}
+
+The replay buffer dominates memory usage during training, making the difference between DDPG and TD3 negligible ($<$1\% increase). For deployment, memory requirements are identical.
+
+\subsection{Hyperparameter Sensitivity}
+\label{subsec:hyperparam_sensitivity}
+
+Based on ablation studies conducted during development:
+
+\textbf{DDPG Sensitivity:}
+
+DDPG exhibits high sensitivity to actor and critic learning rates, requiring careful tuning for stable convergence. The algorithm shows moderate sensitivity to the target update rate $\tau$, while demonstrating low sensitivity to the Ornstein-Uhlenbeck noise parameters.
+
+\textbf{TD3 Sensitivity:}
+
+TD3 demonstrates moderate sensitivity to actor and critic learning rates, though less pronounced than DDPG. The algorithm exhibits low sensitivity to the policy delay parameter $d$ and target smoothing parameters, and very low sensitivity to the target update rate $\tau$, making it substantially more robust to hyperparameter variations.
+
+\textbf{Practical implication:} TD3 is significantly more robust to hyperparameter choices, making it easier to deploy across different systems without extensive tuning.
+
+\subsection{Practical Deployment Considerations}
+\label{subsec:deployment_considerations}
+
+\subsubsection{When to Choose DDPG}
+
+\textbf{Recommended for:}
+
+DDPG is particularly well-suited for proof-of-concept studies, applications where training time is critical and must be minimized, systems with well-characterized dynamics that can benefit from its simpler architecture, scenarios where slightly aggressive control behavior is acceptable, and situations with limited computational resources during the training phase.
+
+\subsubsection{When to Choose TD3}
+
+\textbf{Recommended for:}
+
+TD3 is the preferred choice for production deployments in power systems, safety-critical applications where reliability is paramount, systems requiring high voltage stability with minimal oscillations, operation under uncertain or varying operating conditions, applications that are sensitive to control overshoot and require conservative action selection, and scenarios where training time is not a primary constraint and performance takes precedence.
+
+\subsubsection{Real-Time Implementation Considerations}
+
+Both algorithms are suitable for real-time control:
+
+\textbf{Sampling time:} 1 ms (sufficient for both algorithms)
+
+\textbf{Inference time:} $<$ 0.5 ms on modern DSP hardware
+
+\textbf{Hardware requirements:}
+
+The minimum hardware requirement for real-time implementation is a Texas Instruments TMS320F28379D digital signal processor (32-bit, 200 MHz), while the recommended platforms include the dSPACE MicroLabBox or OPAL-RT OP5707 for enhanced performance and flexibility.
+
+\subsection{Summary and Recommendations}
+\label{subsec:implementation_summary}
+
+\textbf{Key insights:}
+
+\begin{enumerate}
+    \item \textbf{Performance vs. Cost Trade-off:} TD3 provides 2--10\% performance improvement (depending on metric) at 50\% additional training cost
+    
+    \item \textbf{No Real-Time Penalty:} Despite higher training complexity, TD3 has identical inference cost to DDPG, making the performance gains free during deployment
+    
+    \item \textbf{Robustness:} TD3's reduced hyperparameter sensitivity makes it more practical for real-world deployment where extensive tuning may not be feasible
+    
+    \item \textbf{Safety:} TD3's more conservative control actions make it preferable for power system applications where overshoot can cause equipment damage
+\end{enumerate}
+
+\textbf{Overall recommendation:} For the DFIG-Solar PV hybrid system, \textbf{TD3 is the preferred choice} for production deployment despite longer training time, due to its superior stability, robustness, and safety characteristics. DDPG remains valuable for rapid prototyping and initial development.
+
+The quantitative performance comparison based on OPAL-RT HIL simulation results is presented in Chapter 7.

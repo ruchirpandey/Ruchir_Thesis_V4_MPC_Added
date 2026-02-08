@@ -1,0 +1,299 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+% The preceding line is only needed to identify funding in the first footnote. If that is unneeded, please comment it out.
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
+    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+
+\title{Power Optimization of  DFIG system by Integration of a Solar PV system\\
+}
+
+\author{\IEEEauthorblockN{Ruchir Pandey}
+\IEEEauthorblockA{\textit{Electrical Engineering} \\
+\textit{NIT Uttarakhand}\\
+Srinagar Garhwal, India \\
+ruchirpandey.phd19@nituk.ac.in}
+\and
+\IEEEauthorblockN{Sourav Bose\\ Senior Member, IEEE}
+\IEEEauthorblockA{\textit{Electrical Engineering} \\
+\textit{NIT Uttarakhand}\\
+Srinagar Garhwal, India \\
+souravbose@nituk.ac.in}
+}
+
+\maketitle
+
+\begin{abstract}
+In a microgrid various Renewable Energy Sources (RES) are interconnected via a common bus. Each of these individual systems have their own converters and controllers for optimal operation. The Efficiency and Reliability of the combined system is the prime concern for the stability of microgrid. The integration of a Solar Photovoltaic  (SPV) system into an existing doubly fed induction generator (DFIG) based wind energy conversion system (WECS) could help in improving the overall efficiency and cost of the combined system. In this paper mathamatical models of a SPV integrated into a DFIG based WECS  has been simulated using MATLAB. A solar PV system along with MPPT is integrated with the DC link capacitor between GSC and RSC of an existing DFIG. A conventional SPV system  requires seperate converters for grid interconnection. In the paper a SPV is directly integrated with the dc link capacitor to control power flow through rotor and therefore no extra converter is needed for the SPV sytem to be integrated into the grid. Vector control method is used for maintaining frequency, voltage and powerfactor control of DFIG. The simulation results are verified using OPAL-RT realtime hardware system.
+
+\end{abstract}.
+
+\begin{IEEEkeywords}
+microgrid, renewable energy, DFIG, solar PV, rotor side converter, grid side converter 
+\end{IEEEkeywords}
+
+\section{Introduction}
+The electricity generation is unable to meet the present demand of electricity which keeps on increasing day by day. The conventional resources on which we rely are polluting and are depleting with time and their cost is also increasing. There is a need for clean and non-polluting energy resources which can provide reliable and sufficient supply of electricity and can replace the conventional energy resources in future. Renewable energy resources are capable of meeting the ever increasing demand. The combination of various renewable energy technologies can provide clean and reliable supply of electricity. Various renewable energy sources like wind, solar and biomass have been integrated with the grid. The Wind and Solar Energy are uniformly distributed throughout the world and are often used with each other to complement their operations. In this paper, a Doubly Fed Induction Generator(DFIG) system connected with grid is considered which is operating in conjunction with a solar PV system\cite{b1}. The Solar PV system is  integrated into the DC link between grid side converter (GSC) and rotor side converter (RSC) via a dc link capacitor\cite{b2}. In normal operation of DFIG system a battery is used to stabilize the DC Link capacitor voltage to control the power flow via rotor of the DFIG. Integration of the solar PV directly across the DC Link capacitor removes the need of separate converter for the integration of Solar PV system with the grid\cite{b3,b9}. The overall efficiency and cost of the solar PV as well as DFIG system improves and the size of battery system is reduced. This conjunction of the two sources helps in improving the voltage and frequency regulation due to sudden change in the input power of any individual sources. The vector control scheme is employed for the control of voltage and frequency using GSC and RSC\cite{b7}.
+ 
+\section{Mathematical Modelling of Hybrid DFIG-Solar PV system }
+
+
+\subsection{Modelling of Wind Turbine}
+The total Mechanical energy harnessed by wind turbine depends
+on wind speed $V_{w}$, radius r and coefficient of performance $C_{p}$ as follows
+\begin{equation}
+P_{m}=0.5c_{p}\pi r^{2}\rho V_{w}^{3}\label{eq}
+\end{equation}
+
+\begin{equation}
+c_{p}(\lambda,\beta)=0.73(\frac{151}{\lambda_{i}}-0.002*\beta-13.2)e^{-({18.4}{\lambda_{i}})}\label{eq}
+\end{equation}
+
+
+
+\begin{equation}
+\frac{1}{\lambda_{i}}= \frac{1}{(\lambda+0.08\beta)}-\frac{0.035}{\beta^{3}+1}  \label{eq}
+\end{equation}
+
+
+\begin{equation}
+\lambda=\frac{\omega_{T}  r}{V_{w}}=\frac{\omega_{r} r}{\eta_{G} V_{w}} \label{eq}
+\end{equation}
+where,\\
+$\lambda$ is a function of wind velocity $V_w$, turbine speed $\omega$T and generator to the
+turbine shaft gear ratio $\eta_{G}$ a
+
+
+\subsection{D-Q modeling of DFIG}
+
+The three phase Voltages are converted into dq frame for the control and analysis purpose
+\begin{equation}
+\left[
+\begin{matrix}
+V_{a} \\
+V_{b}\\
+ V_{c}
+
+\end{matrix}
+\right]
+=\left[
+\begin{matrix}
+sin(\omega t) & cos(\omega t ) & 1 \\
+sin(\omega t- 120) & cos(\omega t -120) & 1 \\
+sin(\omega t-240) & cos(\omega t-240 ) & 1 \\
+\end{matrix}
+\right]
+\left[
+\begin{matrix}
+V_{d} \\
+V_{q}\\
+ V_{0}
+
+\end{matrix}
+\right]
+\end{equation}
+
+\subsection{Voltage equations}
+\subsubsection{Stator Voltage Equations}
+%\begin{equation}
+\begin{align}
+V_{qs}=p\lambda_{qs}+\omega\lambda_{qs}+r_{s}i_{qs} \label{eq} \\
+V_{ds}=p\lambda_{ds}+\omega\lambda_{qs}+r_{s}i_{ds} \label{eq}\\
+\end{align}
+
+Where,\\
+$V_{qs} \& V_{ds}$ are the stator voltages of quadrature and direct axis respectively\\
+$\lambda_{qs} \& \lambda_{ds}$ are the stator fluxes of quadrature and direct axis respectively\\
+$r_{s}$ is the stator resistance\\
+$\omega$ is the dq frame frequency\\
+p is the number of poles
+
+%\end{equation}
+	
+%	\begin{equation}
+%	V_{ds}=p\lambda_{ds}+\omega\lambda_{qs}+r_{s}t_{ds} \label{eq2}
+%	\end{equation}
+\subsubsection{Rotor Voltage Equation}
+\begin{align}
+V_{qr}=p\lambda_{qr}+(\omega-\omega_{r})\lambda_{dr}+r_{r}i_{qr} \label{eq} \\
+V_{dr}=p\lambda_{dr}-(\omega-\omega_{r})\lambda_{qr}+r_{r}i_{dr} \label{eq} 
+\end{align}
+where,\\
+$V_{qr} \& V_{dr}$ are the rotor voltages of quadrature and direct axis respectively\\
+$\lambda_{qr} \& \lambda_{dr}$ are the stator fluxes of quadrature and direct axis respectively\\
+$r_{r}$ is the stator resistance\\
+$\omega_{r}$ is the rotor frame frequency\\
+
+
+\subsection{Flux Linkage Equation}
+\subsubsection{Stator Flux Equations}
+
+\begin{align}
+\lambda_{qs}=(L_{is}+L_{m})i_{qr}+ L_{m}i_{qs} \label{eq} \\
+\lambda_{ds}=(L_{is}+L_{m})i_{dr}+ L_{m}i_{ds} \label{eq} 
+\end{align}
+
+\subsubsection{Rotor Flux Linkage}
+\begin{align}
+\lambda_{qr}=(L_{ir}+L_{m})i_{qr}+ L_{m}i_{qs} \label{eq} \\
+\lambda_{dr}=(L_{is}+L_{m})i_{dr}+ L_{m}i_{ds} \label{eq} 
+\end{align}
+
+where,\\
+$L_{m}$=magnetizing inductance\\
+$L_{is} \&  L_{ir}$ = stator and rotor leakage inductance
+
+
+\subsection{Power Equation}
+\begin{align}
+P_{s}=\frac{3}{2}(V_{ds}i_{ds}-V_{qs}i_{qs})\label{eq}\\
+Q_{s}=\frac{3}{2}(V_{qs}i_{ds}-V_{ds}i_{qs})\label{eq}
+\end{align}
+where,\\
+$P_{s} \& Q_{s}$ are the stator active and reactive powers respectively,\\
+$i_{ds} \& i_{qs}$ are the stator currents of direct and quadrature axis respectively.
+
+\subsection{Torque Equation}
+\begin{equation}
+T_{e}=-\frac{3p}{4} (\lambda_{ds} i_{qs}-\lambda_{qs} i_{ds})\label{eq}
+\end{equation}
+where,\\
+$T_{e} $ is the electromagnetic torque
+
+\subsection{Modelling of Rotor Side and Grid Side Converters}
+\begin{align}
+P_{RSC}=P_{GSC}+P_{dc}+P_{SPV}\label{eq}\\
+P_{RSC}=V_{dr}i_{dr}+V_{qr}i_{qr}\label{eq}\\
+P_{GSC}=V_{dg}i_{dg}+V_{qg}i_{qg}\label{eq}\\
+P_{dc}=CV_{dc} \frac{V_{dc}}{dt}\label{eq}
+\end{align}
+Where,\\
+$P_{RSC}$,$ P_{GSC}$, $P_{dc}$, $P_{SPV}$ are power at RSC, GSC side, DC link and solar PV\\
+$V_{dg}$, $V_{qg}$ , $i_{dg}$, $i_{qg}$ are AC voltage at GSC side in dq frame,\\
+$V_{dc}$ is the DC link voltage\\
+C is the DC link capacitor value.
+
+\subsection{Modelling of Solar PV System}
+
+\begin{align}
+I=I_{ph}-I_{s}(e^\frac{{V+IR_{s}}}{n_{s}aV_{t}}-1)-\frac{V+IR_{s}}{R_{p}}\label{eq}
+\end{align}
+where I and V stands for output current and voltage
+respectively, $I_{ph}$ is the cells photo current that is directly
+related to irradiation level, $I_{s}$ stand for diode dark current, NS
+is number of the series connected cell in the module, a shows
+the diode quality factor, Vt is the thermal voltage of the cell
+semiconductor and $ R_{s}$ and $R_{p}$ represent the cell series and
+parallel resistance.\\
+A common equation for calculating Is according to module
+temperature and datasheet parameters is [12]:
+\begin{equation}
+I_{s}=\frac{I_{SC}+ki(T-T_{c})}{e^\frac{{V_{oc}+k_{v}(T-T_{c})}}{n_{s}aV_{t}}-1}
+\end{equation}
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[scale=0.9]{SPV.jpg}}
+\caption{One diode model of solar PV.}
+\label{solar_pv}
+\end{figure}
+
+
+\begin{figure*}[htbp]
+\centerline{\includegraphics[width=0.9\textwidth]{solar_wind_hybrid.jpg}}
+\caption{Grid Side converter and Rotor Side converter control.}
+\label{block_diagram}
+\end{figure*}
+
+\subsection{Solar Maximum Power Point Tracking}
+For the Maximum Power Point Tracking, the fixed voltage method is used.  In the fixed voltage method, the PV panel voltage is fixed using the P-V characteristics where voltage corresponding to maximum power is set as reference . Since the maximum power point occurs at some fixed ratio of the open circuit voltage\cite{b11}, therefore, the open circuit voltage could be obtained, and subsequently using the fixed ratio, the PV panel voltage can be calculated. With the help of MPPT controller, duty cycle can be varied till the optimum value of panel voltage is reached.
+
+\section{Control strategy for Solar PV Integration}
+\subsubsection{Solar PV Voltage Control}
+A buck-boost converter is used to regulate the output voltage to match the DC link capacitor voltage while maintaining the Maximum power output of the Solar Array\cite{b10}. The Voltage at the DC link is measured continuously and the duty ratio of the buck- boost converter is adjusted using fixed voltage method to inject maximum power for the measured voltage at the terminal.
+\subsubsection{Control of Grid Side Converter (GSC)}
+The grid side converter is controlled using the SVPWM technique \cite{b7} which allows the decoupled active power ($P_{g}$) and rective power ($Q_{g}$) control of the GSC. the decoupled $P_{g}$ and $Q_{g}$ allows us to control the reactive power and active power control individually through controlling the references for $ i_{gq}$ and $i_{gd}$ for the grid connected  inverter. As the Power of Solar PV keeps varying throughout the day the Power available at dc link also changes with respect to time, as a result the voltage across the DC link capacitor also changes which can then be measured and then using pid controller the reference for the $ i_{dg}$ and $ i_{qg}$ are obtained. the reference current values are then compared with the actual grid curent values of the d and q components, then another pid controller is tuned to minimize the error in output current values.  The pid are tuned by using Genetic alorithm(GA) by taking the square of error values and minimizing the function by setting the error values to 0.01$\%$ tolerance band\cite{b11}.
+
+\section{Results}
+The system was simulated on OPAL-RT system with model data as follows:\\
+\textbf{DFIG Rating}\\
+DFIG Power Output 7.5 kw\\
+Stator Phase Voltage 415V\\
+Stator Current 8A\\
+Rotor Current 12 A  \\
+DC Link voltage 230V\\
+Wind Speed 9 m/s( change at 0.01 m/s)\\
+\textbf{Solar PV Rating}\\
+Rated Output 500W\\
+Voc 108V\\
+Rated Current 5 A\\
+\textbf{Buck Boost Converter Rating}\\
+Capacitor 1000 mF\\
+Inductor 5 mH\\
+
+The results for the hybrid Wind- Solar PV system are as follows:
+
+\begin{figure}[h]
+\includegraphics[width=0.5\textwidth]{rotorvoltage.png}
+\caption{DFIG Rotor Voltage.}
+\label{block_diagram}
+\end{figure}
+
+\begin{figure}[h]
+\includegraphics[width=0.5\textwidth]{rotorcurrent.png}
+\caption{DFIG Rotor Current.}
+\label{block_diagram}
+\end{figure}
+
+\begin{figure}[!h]
+\includegraphics[width=0.5\textwidth]{statorvoltage.png}
+\caption{DFIG Stator Voltage.}
+\label{block_diagram}
+\end{figure}
+\begin{figure}[!h]
+\includegraphics[width=0.5\textwidth]{statorcurrent.png}
+\caption{DFIG Stator Currents.}
+\label{block_diagram}
+\end{figure}
+\begin{figure}
+\includegraphics[width=0.5\textwidth]{dcvoltage.png}
+\caption{DC Link Voltage.}
+\label{block_diagram}
+\end{figure}
+
+\section{Conclusion}
+The Integration of Solar PV system with the DC link of the rotor side converter removes the need of using seperate converter for the Solar PV plant and increases the overall efficiency of the Hybrid system. It reduces the number of components required for conversion and improves the overall conversion efficiency of hybrid system interms of control efforts. The reliability of the system also improves as there are fewer steps involved in the conversion. The future scope of the study includes the comparison of standalone system with the hybrid system and improve the harmonic content introduced due to MPPT system of solar PV while regulating voltage .
+
+%\section*{References}
+\begin{thebibliography}{00}
+\bibitem{b1}S. K. Tiwari, B. Singh, and P. K. Goel. ``Design and control of autonomous wind–solar system with DFIG feeding 3-phase 4-wire loads." IEEE Transactions on Industry Applications, vol. 54, pp. 1119--1127, April 2018.
+
+\bibitem{b2}S. K. Tiwari, B. Singh and P. K. Goel, ``Design and control of autonomous wind-solar energy system with DFIG feeding 3-phase 4-wire network," 2015 Annual IEEE India Conference (INDICON), 2015, pp. 1--6.
+
+
+\bibitem{b3}Zarei, M. Ebrahim, B. Asaei, and M. E. Nezhad. ``Integration of DFIG based wind turbine and PV plant in order to reduce the number of power converters." in 2013 13th International Conference on Environment and Electrical Engineering (EEEIC), 2013, pp. 301--306. 
+
+\bibitem{b7}H. Jenkal, B. Bossoufi, A. Boulezhar, A. Lilane, S. Hariss, ``Vector control of a Doubly Fed Induction Generator wind turbine," in Materials Today: Proceedings, vol. 30, pp. 976--980, 2021.
+
+\bibitem{b4}P. K. Goel, B. Singh, S. S. Murthy and N. Kishore. ``Modeling and control of autonomous wind energy conversion system with doubly fed induction generator," in 2010 Joint International Conference on Power Electronics, Drives and Energy Systems and 2010 Power India, 2010, pp. 1--8. 
+
+\bibitem{b5}Mahalakshmi, R., J. Viknesh, and K. C. Sindhu Thampatty. ``Mathematical modelling of grid connected Doubly Fed Induction Generator based wind farm." in 2016 IEEE International Conference on Power Electronics, Drives and Energy Systems (PEDES), 2
+%G. Eason, B. Noble, and I. N. Sneddon, ``On certain integrals of Lipschitz-Hankel type involving products of Bessel functions,'' Phil. Trans. Roy. Soc. London, vol. A247, pp. 529--551, April 1955.
+\bibitem{b6}Shajari, Sadegh, and R.K. Pour. ``Reduction of battery size and charge-discharge for active power smoothing of DFIG." In 2012 11th International Conference on Environment and Electrical Engineering, 2012, pp. 112--114.
+\bibitem{b7} H. Karimi-Davijani, A. Sheikholeslami, R. Ahmadi and H. Livani, "Active and reactive power control of DFIG using SVPWM converter," 2008 43rd International Universities Power Engineering Conference, 2008, pp. 1-5
+
+
+\bibitem{b8}M. El Azzaoui, H. Mahmoudi, and K. Boudaraia, “Analysis and control of grid connected DFIG and solar PV based hybrid energy system,” Proc. 2016 Int. Renew. Sustain. Energy Conf. IRSEC 2016, pp. 1104–1109, 2017.
+\bibitem{b9}M. Sleiman, B. Kedjar, A. Hamadi, K. Al-Haddad, and H. Y. Kanaan, “Modeling, control and simulation of DFIG for maximum power point tracking,” 2013 9th Asian Control Conf. ASCC 2013, 2013.
+\bibitem{b10}R. Bhushan, K. Chatterjee, and R. Shankar, “Comparison between GA-based LQR and conventional LQR control method of DFIG wind energy system,” 2016 3rd Int. Conf. Recent Adv. Inf. Technol. RAIT 2016, pp. 214–219, 2016.
+\bibitem{b11}M. E. Zarei, B. Asaei, and M. E. Nezhad, “Integration of DFIG based wind Turbine and PV plant in order to reduce the number of Power Converters,” pp. 3–8, 2013.
+
+
+\end{thebibliography}
+
+\end{document}

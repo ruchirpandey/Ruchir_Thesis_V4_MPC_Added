@@ -1,0 +1,769 @@
+\documentclass[fleqn,10pt,hidelinks]{wlscirep}
+
+%%% Essential Packages
+\usepackage[utf8]{inputenc}
+\usepackage{fontenc}
+
+%%% Fonts
+\usepackage{newtxtext,newtxmath}
+
+%%% Graphics
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{circuitikz}
+\usetikzlibrary{shapes, arrows.meta, positioning}
+\usepackage{subcaption}
+\usepackage{epstopdf}
+
+%%% Tables
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{colortbl}
+
+%%% Math & Algorithms
+\usepackage{siunitx}
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{bm}
+
+%%% References & Links
+\usepackage{cite}
+\usepackage{url}
+
+%%% Layout
+\usepackage{float}
+\usepackage{stfloats}
+\usepackage{balance}
+\usepackage{flushend}
+
+%%% List Environments
+\usepackage{enumitem}
+
+%%% Colors
+\definecolor{GoldenTainoi}{rgb}{1.0, 0.87, 0.68}
+\definecolor{HawkesBlue}{rgb}{0.8, 0.92, 1.0}
+\definecolor{limegreen}{rgb}{0.2, 0.8, 0.2}
+\definecolor{forestgreen}{rgb}{0.13, 0.55, 0.13}
+\definecolor{greenhtml}{rgb}{0.0, 0.5, 0.0}
+
+%%% Miscellaneous
+\usepackage{pifont}
+\usepackage{verbatim}
+\usepackage{lipsum}
+\usepackage{academicons}
+
+%%% Hyperref should be loaded last
+\usepackage{hyperref}
+
+\title{Twin-Delayed Deep Deterministic Policy Gradient for Enhanced Power Optimization in Solar PV-Integrated DFIG Wind Energy Systems}
+
+\author[1]{Ruchir Pandey}
+\author[2,*]{Mahmood Aldobali}
+\author[1]{Sourav Bose}
+\author[1]{Prakash Dwivedi}
+\author[3]{Yahya Alward}
+\author[1]{Satyaveer Negi}
+
+\affil[1]{Department of Electrical Engineering, National Institute of Technology Uttarakhand, Srinagar Garhwal, India}
+\affil[2]{Department of Mechatronics Engineering, Ar-Rasheed Smart University, Sana’a, Yemen}
+\affil[3]{Electrical Engineering Department, School of Engineering, Gautam Buddha University, Greater Noida, India}
+
+\affil[*]{mahmood.m.aldobali@ar-rasheed.edu.ye}
+
+
+\begin{abstract}
+The electrical power systems are facing rising challenges of stability and control with increasing share of intermittent renewable energy power sources.This work presents application of Twin-Delayed Deep Deterministic Policy Gradient (TD3) algorithm in single unified controller for multi objective control of DFIG-Solar PV system connected to power grid.The commonly used proportional-Integral (PI) controller are not suitable to address nonlinearities of single controller based hybrid DFIG and solar PV systems. At times, the latest reinforcement learning methods based controller like DDPG can be erratic and aggressive due to overestimation of actor's control action. These aggressive actions, that causes overshoot and oscillation, can be overcome by adopting TD3 algorithm. the TD3 algorithm provides improved learning capabilities and performance by mitigating overestimation by using dual critic networks. A single TD3-based controller is implemented to simultaneously control the Rotor Side Converter (RSC) ,Grid Side Converter (GSC) and solar PV system integrated at the DC link. OPAL-RT real time hardware in loop (HIL) simulation results has been presented to demonstrate improved performance compared to PI and DDPG based controllers. 
+
+\end{abstract}
+
+\begin{document}
+
+\flushbottom
+\maketitle
+\thispagestyle{empty}
+
+\noindent \textbf{Keywords:} DFIG wind system, solar PV integration, twin-delayed deep deterministic policy gradient, renewable energy control, power optimization, machine learning, reinforcement learning
+
+\section*{Nomenclature}
+\begin{description}
+\item[$R_s, R_r$] Stator and rotor resistances
+\item[$L_s, L_r$] Stator and rotor inductances  
+\item[$L_m$] Mutual inductance
+\item[$L'_s$] Transient stator inductance
+\item[$T_r$] Rotor time constant
+\item[$R_1$] Combined resistance parameter
+\item[$i_{qs}, i_{ds}, i_{qr}, i_{dr}$] Stator and rotor $d$-$q$ axis currents
+\item[$V_{qr}, V_{dr}$] Rotor control voltages
+\item[$\omega_r, \omega_s, \omega_b$] Rotor, synchronous, and base angular frequencies
+\item[$\theta_r$] Rotor angle
+\item[$e'_{qs}, e'_{ds}$] Transient stator voltages
+\item[$P_s, Q_s$] Stator active and reactive power
+\item[$P_g, Q_g$] Grid active and reactive power
+\item[$I, V$] PV output current and voltage
+\item[$I_{ph}, I_s$] Photocurrent and reverse saturation current
+\item[$R_{s,pv}, R_p$] PV series and parallel resistances
+\item[$n_s, V_t$] Number of series cells and thermal voltage
+\item[$i_{pv}, P_{pv}$] PV current and power output
+\item[$v_{dc}$] DC link voltage
+\item[$i_{r,dc}, i_{g,dc}$] Rotor and grid side converter DC currents
+\item[$v_{gd}, v_{gq}$] Grid $d$ and $q$-axis voltages
+\item[$i_{gd}, i_{gq}$] Grid $d$ and $q$-axis currents
+\item[$v_w$] Wind speed
+\item[$\theta_{\mu}$] Actor network parameters
+\item[$\theta_{Q_1}, \theta_{Q_2}$] Twin critic network parameters
+\item[$s, a, r$] State vector, action vector, and reward
+\item[$r_{RSC}, r_{GSC}$] RSC and GSC reward components
+\item[$\gamma, \tau$] Discount factor and target network update rate
+\item[$\sigma, c, d$] Noise std. deviation, clipping range, policy delay
+\item[$w_1, \ldots, w_6$] Reward function weighting factors
+\item[$W, b$] Neural network weights and biases
+\end{description}
+
+
+\section*{Introduction}
+
+The electrical power grids design has been undergoing tremendous changes due to increased transition towards intermittent renewable energy sources. These sources are being integrated at large scale   
+
+The wind and solar are intermittent in nature but they complement each other well, The inclusion of solar PV into the  DFIG rotor side converter helps in reducing the effect of intermittency on the total Power output of the system \cite{tiwari2018design, kumar2020control}. The hybrid configurations are finding applications from microgrids to utility-scale systems \cite{yue2019guest, zafar2018prosumer, gao2018probabilistic, hong2018energy}, as they offer better grid support, improvement in system efficiency, and increases the reliability. The integration of  the PV system at the DFIG's DC link eliminates need of a separate converter for Solar PV, thereby reducing components required and thereby reduces cost and decreases system complexity \cite{bhattacharyya2022wind}.
+
+
+The reduction in system components by eliminating separate converter increases the complexity of the control as such tightly coupled multi-source systems presents a challenge for a single controller.  Conventional method of control like Proportional-Integral (PI) controllers, are widely implemented due to their simplicity and robustness at a specific design point. However, their fundamental limitation lies in their linear nature; they are not adequate for a highly nonlinear, time-varying dynamics of a hybrid system subjected to intermittent wind and solar inputs. The performance of PI controllers degrades while operating under the conditions that deviates from the nominal point of operation for which they were tuned.\cite{linares2015robust, yao2016sliding}.
+
+
+
+The Deep reinforcement learning (DRL) method provides optimal control capability by learning directly from system interaction using actor-critic networks \cite{zhang2023drl, wang2021drl}. Deep Deterministic Policy Gradient (DDPG) provide continuous control capability but sometimes it may overestimate control action values due to approximation error of a single critic network \cite{lillicrap2015ddpg}. This may cause erratic behavior of power system due to aggressive control action. Deep Belief Networks (DBNs) can also provide powerful feature extraction but are not suitable for real time closed-loop applications \cite{wu2024adaptive}. There is a requirement of implementing advanced algorithm to overcome above challenges  by providing steady real time control \cite{bhattacharyya2022wind}.
+
+
+The paper proposes a controlled strategy based on  Twin-Delayed Deep Deterministic Policy Gradient (TD3) algorithm to address these limitations. TD3 is an advanced actor-critic DRL algorithm that overcomes the overestimation bias of DDPG using dual critic networks to obtain a conservative value estimate. It also provides delayed updates to policy network , and target policy smoothing to achieve the learning process stability \cite{fujimoto2018td3}. TD3 learns robust and stable control policies making it  suitable for power system control  by mitigating overestimation bias \cite{zholtayev2024td3, lee2023td3}. The algorithm has provided improved performance in power system frequency control \cite{liang2024td3}, energy management systems \cite{rana2024td3}, and wind turbine control \cite{zholtayev2024td3pmsg, qiu2023td3improved}.
+
+
+
+
+This study makes the following contributions:
+\begin{itemize}
+    \item The design and implementation of a single, unified TD3-based controller with coupled dynamics of the DFIG's RSC, GSC, and the integrated PV-DC link system.
+    \item The TD3 based controller resulting in power overshoot reduction and DC-link voltage regulation over conventional PI and DDPG based controllers.
+    \item The validation of controller performance on an OPAL-RT Hardware-in-the-Loop (HIL) platform.
+\end{itemize}
+
+\section*{System Configuration and Modeling}
+
+\subsection*{System Architecture}
+
+The hybrid system topology as depicted in Figure \ref{fig:system_topology} consists of a DFIG-based wind turbine with its stator connected to the grid and a back-to-back converter connected at its rotor. A Solar-PV array is integrated at the common DC link between the RSC and GSC. The  architecture  has a unified controller for all converters of this hybrid system. The GSC manages power flow from both the wind turbine and the solar array, while maintaining a stable DC link voltage. This topology eliminates the need for a separate DC-DC boost converter and inverter for the PV system, thus reducing system complexity and cost. The conventional PI controllers for both the RSC and GSC have been replaced by a single, centralized TD3 agent that generates control signals for both converters.
+
+
+\begin{figure*}[h]
+\centering
+\includegraphics[width=0.9\textwidth]{images/dpfig_mod.drawio.png}
+\caption{TD3 based Grid Side converter and Rotor Side converter control}
+\label{fig:system_topology}
+\end{figure*}
+
+\subsection*{DFIG System Mathematical Model}
+
+To implement the control design, the dynamic behavior of the DFIG is modeled in a synchronously rotating direct-quadrature (d-q) reference frame. This transformation is essential because it converts the three-phase AC machine dynamics into a more tractable control problem with quantities that behave like DC variables in steady state, simplifying the design of the controller. The voltage and flux equations for the DFIG are given by \cite{zhang2021deep, wang2015control}:
+
+
+\begin{equation}\label{eq:stator_q_voltage}
+V_{qs} = R_s i_{qs} + \frac{d\psi_{qs}}{dt} + \omega_s \psi_{ds}
+\end{equation}
+
+\begin{equation}\label{eq:stator_d_voltage}
+V_{ds} = R_s i_{ds} + \frac{d\psi_{ds}}{dt} - \omega_s \psi_{qs}
+\end{equation}
+
+\begin{equation}\label{eq:rotor_q_voltage}
+V_{qr} = R_r i_{qr} + \frac{d\psi_{qr}}{dt} + (\omega_s - \omega_r) \psi_{dr}
+\end{equation}
+
+\begin{equation}\label{eq:rotor_d_voltage}
+V_{dr} = R_r i_{dr} + \frac{d\psi_{dr}}{dt} - (\omega_s - \omega_r) \psi_{qr}
+\end{equation}
+
+where $V$, $i$, and $\psi$ are voltage, current, and flux, respectively. These equations form the basis for simulating the machine's behavior and have been used in various literature works \cite{hu2019development}.
+
+
+The solar PV array is represented using the single-diode equivalent circuit model, which provides a balance between accuracy and computational simplicity \cite{shuai2021deep, yang2021composite}. The current-voltage (I-V) relationship is expressed as:
+
+\begin{equation}\label{eq:pv_model}
+I = I_{ph} - I_s \left(e^{\frac{V+IR_{s,pv}}{n_s V_t}} - 1\right) - \frac{V + IR_{s,pv}}{R_p}
+\end{equation}
+
+This one diode model of solar-PV includes the nonlinear I-V characteristics of the PV array under varying solar irradiance and temperature conditions, which is used for developing a controller that can track the maximum power point effectively \cite{kumar2020control}.
+
+
+\section*{TD3 Environment Modeling}
+
+The modeling Environment used for the reinforcement learning is carefully created to involve the state space, action space, and reward function. This process effectively enables the control objectives that the RL agent can understand and optimize. The TD3 algorithm is an extension of DDPG and is used here to learn a control policy that relates system states to optimal control actions \cite{fujimoto2018td3, dankwa2019td3}.
+
+
+\subsection*{System State Space}
+
+The state vector, $s$, gives complete observability of the system's electrical and mechanical dynamics to the agent, which allows an informed decision-making. An 11-dimensional state vector is used to include all the state condition of the hybrid system:
+
+
+\begin{equation}\label{eq:state_vector}
+s = [i_{qs}, i_{ds}, i_{qr}, i_{dr}, v_{dc}, i_{pv}, P_s, Q_s, P_g, Q_g, \theta_r]^T
+\end{equation}
+
+
+The state vector includes all the DFIG's electrical states of the stator and rotor d-q currents: $i_{qs}, i_{ds}, i_{qr}, i_{dr}$, all the DC link and PV system states i.e. DC link voltage $v_{dc}$ and PV current $i_{pv}$, the power flow states of stator and grid active/reactive power: $P_s, Q_s, P_g, Q_g$, and the DFIG's mechanical state of rotor angle $\theta_r$. This representation allows the algorithm to learn the complex couplings between the wind, solar, and grid-side subsystems.
+
+
+\subsection*{Action Space}
+
+The action vector, $a$, represents the control signals that the agent can apply to the system. A 4-dimensional continuous action space is defined, corresponding to the d-q axis voltage references for the RSC and GSC:
+
+\begin{equation}\label{eq:action_vector}
+a = [v_{qr}, v_{dr}, v_{qg}, v_{dg}]^T
+\end{equation}
+
+The use of a continuous action space is a key advantage of TD3, as it allows for fine-grained and smooth control of the power electronic converters, which is essential for precise power management and minimizing electrical stress on the components.
+
+\subsection*{System Dynamics}
+
+The environment's dynamics, or its "physics engine," describe how the system state evolves over time in response to the agent's actions. These dynamics are governed by the set of nonlinear differential equations that model the DFIG, PV array, and DC link \cite{wang2015control}:
+
+\begin{equation}\label{eq:system_dynamics}
+\dot{s} = f(s,a) = [\dot{i}_{qs}, \dot{i}_{ds}, \dot{i}_{qr}, \dot{i}_{dr}, \dot{\omega}_r, \dot{v}_{dc}, \dot{i}_{pv}, \dot{P}_s, \dot{Q}_s, \dot{P}_g, \dot{Q}_g, \dot{\theta}_r]^T
+\end{equation}
+
+Key components of these dynamics include the stator current derivatives, which are influenced by the rotor control voltages, and the DC link voltage derivative, which depends on the power balance between the PV array, RSC, and GSC:
+
+\begin{align}\label{eq:stator_q_current_derivative}
+\dot{i}_{qs} &= \frac{\omega_b}{L'_s} \bigg(-R_1 i_{qs} + \omega_s L'_s i_{ds} + \frac{\omega_r}{\omega_s} e'_{qs} \nonumber\\
+&\quad - \frac{1}{T_r \omega_s} e'_{ds} - v_{qs} + \frac{L_m}{L_{rr}} v_{qr}\bigg)
+\end{align}
+
+\begin{align}\label{eq:stator_d_current_derivative}
+\dot{i}_{ds} &= \frac{\omega_b}{L'_s} \bigg(-\omega_s L'_s i_{qs} - R_1 i_{ds} + \frac{1}{T_r \omega_s} e'_{qs} \nonumber\\
+&\quad + \frac{\omega_r}{\omega_s} e'_{ds} - v_{ds} + \frac{L_m}{L_{rr}} v_{dr}\bigg)
+\end{align}
+
+\begin{equation}\label{eq:rotor_speed_derivative}
+\dot{\omega}_r = \frac{1}{J}(T_m - T_e - B\omega_r)
+\end{equation}
+
+\begin{equation}\label{eq:dc_voltage_derivative}
+\dot{v}_{dc} = \frac{1}{C}(i_{pv} + i_{r,dc} - i_{g,dc})
+\end{equation}
+
+\subsection*{Twin Actor-Critic Networks}
+
+The TD3 algorithm consists of  an actor-critic architecture. The actor network links  states to actions relation. This neural network is designed having the state vector as input and action vector as output :
+
+\begin{equation}\label{eq:actor_network}
+\mu(s|\theta_{\mu}) = \tanh(W_n \sigma(W_{n-1} \ldots \sigma(W_1 s + b_1) \ldots + b_{n-1}) + b_n)
+\end{equation}
+
+To evaluate the actor's policy, TD3 utilizes a pair of critic networks, $Q_1$ and $Q_2$. Each critic network approximates the action-value function, which estimates the expected long-term reward for taking a specific action in a given state \cite{fujimoto2018td3}. They take both the state and action as input and output a scalar Q-value:
+
+\begin{equation}\label{eq:critic_network}
+Q_i(s,a|\theta_{Q_i}) = W'_n \sigma(W'_{n-1} \ldots \sigma(W'_1[s,a] + b'_1) \ldots + b'_{n-1}) + b'_n
+\end{equation}
+
+where $i \in \{1,2\}$.
+
+\subsection*{TD3 Policy Updates}
+
+TD3 introduces three key innovations over DDPG to ensure stable and effective learning, each targeting a specific failure mode of earlier actor-critic methods \cite{fujimoto2018td3, han2022td3}.
+
+\textbf{Clipped Double Q-Learning:} This mechanism is the primary defense against overestimation bias. When calculating the target value for training the critic networks, TD3 takes the minimum value estimate from the two target critic networks \cite{zholtayev2024td3}. The logic is that it is less probable for two independently trained estimators to overestimate the value of the same action. This produces a more conservative, and therefore more reliable, value estimate, which is highly desirable in power systems where optimistic actions can lead to instability.
+
+\begin{equation}\label{eq:target_value}
+y = r + \gamma \min_{i=1,2} Q'_i(s', \tilde{a}'|\theta'_{Q_i})
+\end{equation}
+
+
+% After Equation 8 (Clipped Double Q-Learning)
+Where $r$ is the immediate reward, $\gamma$ is the discount factor, $s'$ is the next state, and $\tilde{a}'$ is the target action with added noise. The $\min$ operator selects the lower Q-value estimate from the two independent critics.This conservative target serves as the regression objective for updating both critic networks.\\
+
+
+\textbf{Target Policy Smoothing:} This technique acts as a form of regularization \cite{fujimoto2018td3}. Small, clipped noise is added to the target action before it is used to compute the target Q-value. This smooths the value landscape and prevents the actor from exploiting narrow, brittle peaks in the learned value function, leading to a more robust policy that generalizes better to unseen states.
+
+\begin{equation}\label{eq:target_action_smoothing}
+\tilde{a}' = \text{clip}(\mu'(s'|\theta'_{\mu}) + \text{clip}(\epsilon, -c, c), a_{low}, a_{high})
+\end{equation}
+
+where $\epsilon \sim \mathcal{N}(0, \sigma)$.
+% After Equation 9 (Target Policy Smoothing)
+The target action $\tilde{a}'$ is computed by adding clipped Gaussian noise $\epsilon$ to the target policy output $\mu'(s'|\theta'_{\mu})$. The inner clip constrains the noise magnitude to $[-c, c]$, while the outer clip ensures the final action remains within valid bounds $[a_{low}, a_{high}]$. \\
+
+\textbf{Delayed Policy Updates:} This mechanism stabilizes the learning process \cite{kim2020td3}. The actor network (the decision-maker) and the target networks are updated less frequently than the critic networks (the evaluators). This allows the critic networks to converge toward a more accurate value estimate before the actor updates its policy based on that evaluation. This prevents the actor from chasing a noisy, rapidly changing value signal. The actor's policy gradient is computed as:
+
+\begin{equation}\label{eq:policy_gradient}
+\nabla_{\theta_{\mu}} J = \frac{1}{N} \sum_{i=1}^{N} \nabla_a Q_1(s,a|\theta_{Q_1})|_{a=\mu(s)} \nabla_{\theta_{\mu}} \mu(s|\theta_{\mu})
+\end{equation}
+
+% After Equation 10 (Delayed Policy Updates)
+The policy gradient updates the actor parameters $\theta_{\mu}$ in the direction that maximizes the Q-value predicted by the first critic $Q_1$. The chain rule decomposes this into two terms: $\nabla_a Q_1$ (how Q-value changes with action) and $\nabla_{\theta_{\mu}} \mu$ (how the policy output changes with network parameters). Crucially, this update occurs only every $d$ critic updates, allowing the value estimates to stabilize before the policy adjusts, preventing premature convergence to suboptimal policies.
+
+\subsection*{Experience Replay and Target Networks}
+
+Like DDPG, TD3 utilizes an experience replay buffer to store past transitions and target networks to stabilize learning. The buffer stores tuples of (state, action, reward, next state):
+\begin{equation}\label{eq:replay_buffer}
+\mathcal{B} = \{(s_t, a_t, r_t, s_{t+1})\}_{t=1:T}
+\end{equation}
+
+The target networks are updated slowly ("soft" updates) to track the learned networks, providing a stable target for the learning updates. These updates are performed with the same delay as the actor update:
+\begin{equation}\label{eq:target_critic_update}
+\theta'_{Q_i} = \tau \theta_{Q_i} + (1-\tau) \theta'_{Q_i}, \quad i \in \{1,2\}
+\end{equation}
+
+\begin{equation}\label{eq:target_actor_update}
+\theta'_{\mu} = \tau \theta_{\mu} + (1-\tau) \theta'_{\mu}
+\end{equation}
+
+\subsection*{Reward Functions}
+
+The design of the reward function is critical as it the control objectives for the RL agent. A multi-objective quadratic penalty function is formulated to balance the competing goals of power tracking and system stability. The reward is composed of separate components for the RSC and GSC.
+
+The RSC reward penalizes deviations from the desired rotor speed ,reference stator active and reactive power levels:
+\begin{equation}\label{eq:rsc_reward}
+r_{RSC} = -(w_1(\omega_r - \omega^*_r)^2 + w_2(P_s - P^*_s)^2 + w_3(Q_s - Q^*_s)^2)
+\end{equation}
+
+The GSC reward penalizes deviations from the reference DC link voltage and the desired grid-side active and reactive power exchange:
+\begin{equation}\label{eq:gsc_reward}
+r_{GSC} = -(w_4(v_{dc} - v^*_{dc})^2 + w_5(P_g - P^*_g)^2 + w_6(Q_g - Q^*_g)^2)
+\end{equation}
+
+The total reward provided to the agent at each step is the sum of these components:
+\begin{equation}\label{eq:total_reward}
+r = r_{RSC} + r_{GSC}
+\end{equation}
+
+The weighting factors, $w_i$, explicitly define the control priorities. Due to the complexity of simultaneously optimizing all objectives from a random starting point, a curriculum learning strategy was employed. The agent was initially trained on simpler sub-tasks before the multi-objective reward function was introduced. This guided learning approach proved essential for achieving convergence on the control objective.
+
+\section*{Methods}
+
+\subsection*{Twin-Delayed Deep Deterministic Policy Gradient Control Strategy and Implementation}
+
+The implementation of the TD3 control framework followed a comprehensive model to hardware pipeline. The control environment, actor network, twin critic networks, and reward function were developed in Python using the TensorFlow and Keras libraries. The agent was trained in this simulated environment on a Google Colab platform equipped with an NVIDIA T4 GPU. The state-action space formulation was  designed for the DFIG-solar PV integrated system, as per the recent DRL applications in power systems \cite{chen2021reinforcement, yang2020two, zhang2023drl}. The weighting factors for the multi-objective reward function, which embody the high-level control goals, are detailed in Table \ref{tab:reward_weights}.
+
+\begin{table}[htbp]
+\centering
+\caption{Reward Function Weighting Factors}
+\label{tab:reward_weights}
+\begin{tabular}{|l|c|}
+\hline
+\rowcolor{gray!10}
+\textbf{Objective} & \textbf{Weight} \\
+\hline
+Frequency tracking ($w_1$) & 0.4 \\
+\hline
+Rotor Active Power tracking ($w_2$) & 0.3 \\
+\hline
+Rotor Reactive Power tracking ($w_3$) & 0.3 \\
+\hline
+DC link voltage ($w_4$) & 0.2 \\
+\hline
+Grid Side Active Power tracking ($w_5$) & 0.4 \\
+\hline
+Grid Side Reactive Power tracking ($w_6$) & 0.4 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsubsection*{RSC Control Environment}
+
+\begin{itemize}
+\item RSC Control: $[i_{rd}, i_{rq}, i_{sd}, i_{sq}, \omega_r, v_w, V_{dc}, I_{pv}]$
+\item State observation: 8-dimensional state vector
+\item Action computation: 2-dimensional control signal $[V_{rd}, V_{rq}]$
+\item Reward calculation: according to \eqref{eq:rsc_reward} based on the accuracy of power tracking
+\end{itemize}
+
+\subsubsection*{GSC Control Environment}
+
+\begin{itemize}
+\item GSC Control: $[i_{gd}, i_{gq}, V_{dc}, v_{gd}, v_{gq}, P_{pv}]$
+\item State observation: 6-dimensional state vector
+\item Action computation: 2-dimensional control signal $[V_{gd}, V_{gq}]$
+\item Reward calculation: according to \eqref{eq:gsc_reward} based on the stability of the DC link.
+\end{itemize}
+
+\subsubsection*{Reward Function Design}
+
+The multi-objective reward function was selected to optimize power tracking accuracy for the RSC and DC link voltage stability for the GSC. This formulation uses the approach in similar intelligent control applications \cite{du2020intelligent} and enable the TD3 algorithm to learn a balanced control policy. The total reward for training is obtained by adding the rewards for the RSC and GSC as defined in \eqref{eq:total_reward}.
+
+\subsubsection*{Actor Network}
+
+The actor network architecture  effectively capture the complex, nonlinear relationships between the system state and the optimal control actions from successful DRL implementations in power system control \cite{wu2024adaptive, yan2021deep, zholtayev2024td3pmsg}. The network takes the 11-dimensional state vector \eqref{eq:state_vector} as input and, through a series of hidden layers, produces the 4-dimensional control action vector \eqref{eq:action_vector}. ReLU activation functions are used in the hidden layers to model nonlinearities and the output voltages are constrained within physically realistic bounds by final layer.
+
+\subsubsection*{Twin Critic Networks}
+
+A key feature of the TD3 architecture is the use of two independent critic networks to evaluate the actions selected by the actor \cite{fujimoto2018td3}. This twin-network approach provides more robust and stable value estimates by taking the minimum of the two critic predictions during the target calculation, which effectively mitigates the overestimation bias common in single-critic actor-critic methods. This technique has demonstrated superior performance in renewable energy control applications \cite{yang2020two, mbuwir2017battery, rana2024td3}, enabling more stable and accurate policy updates. Each critic network takes both the 11-dimensional state vector and the 4-dimensional action vector as input and outputs a scalar Q-value, indicating the quality of the action in that state. The minimum of these two values is then used to train the actor, promoting a more conservative and reliable control policy. The interaction between these networks is illustrated in Figure \ref{fig:actor_critic}.
+
+\begin{figure*}[h]
+\centering
+\includegraphics[width=0.5\textwidth]{images/TD3ActorCritic.png}
+\caption{Actor-Critic Network Diagram for TD3}
+\label{fig:actor_critic}
+\end{figure*}
+\subsubsection*{Training Method}
+
+The training process followed the phases below: \\
+
+\textbf{Initialization Phase (Episodes 1-100):} - Replay buffer populated with 10,000 random exploration transitions \\
+
+\textbf{Curriculum Learning Phase (Episodes 101-800):}
+A staged reward function approach was employed to improve convergence of RSC power tracking, : Single-objective DC link regulation , Full multi-objective reward with all weights as per Table \ref{tab:reward_weights} \\
+
+\textbf{Fine-tuning Phase (Episodes 801-2500):} The convergence achieved when the training was terminated with the moving average reward (window=100 episodes) reaching less than 0.5\% for 200 consecutive episodes. This criteria was met after approximately 2000 episodes, with an additional 500 episodes conducted to confirm stability.
+
+\subsubsection*{Hyperparameters}
+
+The TD3 hyperparameters were selectively optimized for the controller of DFIG-Solar PV hybrid system\cite{fujimoto2018td3, zholtayev2024td3pmsg,Muktiadji_HyperParam}. One of the key parameters, Discount factor, emphasizes long-term rewards over immediate gains whereas the {Learning rates} for the actor and critic networks control the speed and stability of parameter updates. The {Target update rate} determines how gradually target networks track the learned networks and Policy update delay reduces coupling between actor and critic updates. These values are presented in Table \ref{tab:drl_params}. The network architectures are detailed in Table \ref{tab:network_arch}. The hidden layer structure of neurons is a common and effective choice for continuous control problems.
+
+\begin{table}[h]
+\centering
+\caption{Neural Network Architecture}
+\label{tab:network_arch}
+\begin{tabular}{|l|p{6cm}|}
+\hline
+\multicolumn{2}{|c|}{\textbf{Actor Network}} \\
+\hline
+Input layer & State input (11 states) \\
+\hline
+Hidden layers & [400, 300] neurons with ReLU activation \\
+\hline
+Output layer & 4 actions (RSC and GSC control signals) with tanh activation \\
+\hline
+\multicolumn{2}{|c|}{\textbf{Critic Networks (Twin)}} \\
+\hline
+State input & 11 dimensions \\
+\hline
+Action input & 4 dimensions \\
+\hline
+Hidden layers & [400, 300] neurons with ReLU activation \\
+\hline
+Output layer & 1 (Q-value) with linear activation \\
+\hline
+Architecture & Two independent critic networks $Q_1$ and $Q_2$ \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\centering
+\begin{minipage}[t]{0.48\textwidth}
+\centering
+\caption{DDPG Learning Parameters}
+\label{tab:learning_params}
+\begin{tabular}{|l|c|}
+\hline
+\rowcolor{gray!10}
+\textbf{Parameter} & \textbf{Value} \\ \hline
+Discount factor ($\gamma$) & 0.99 \\ \hline
+Actor learning rate & $1\times10^{-4}$ \\ \hline
+Critic learning rate & $1\times10^{-3}$ \\ \hline
+Target update rate ($\tau$) & 0.001 \\ \hline
+Batch size & 64 \\ \hline
+Replay buffer size & $1\times10^6$ \\ \hline
+\end{tabular}
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+\centering
+\caption{TD3 Learning Parameters}
+\label{tab:drl_params}
+\begin{tabular}{|l|c|}
+\hline
+\rowcolor{gray!10}
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Discount factor ($\gamma$) & 0.99 \\
+\hline
+Actor learning rate & $8 \times 10^{-5}$ \\
+\hline
+Critic learning rate & $7.5 \times 10^{-4}$ \\
+\hline
+Target update rate ($\tau$) & 0.0008 \\
+\hline
+Policy update delay ($d$) & 2 \\
+\hline
+Target policy noise ($\sigma$) & 0.2 \\
+\hline
+Target noise clip ($c$) & 0.5 \\
+\hline
+Batch size & 64 \\
+\hline
+Replay buffer size & $1 \times 10^6$ \\
+\hline
+\end{tabular}
+\end{minipage}
+\end{table}
+
+The training detailed in Table \ref{tab:training_schedule} consisted of 2500 episodes. The cumulative reward per episode showed a steady increase, with the policy converging to a stable, high-performing solution after approximately 2000 episodes. The total training process required approximately 12 hours, a modest increase over DDPG that is justified by the significant improvement in controller performance \cite{fujimoto2018td3, han2022td3}.
+
+\begin{table}[htbp]
+\centering
+\caption{Training Configuration}
+\label{tab:training_schedule}
+\begin{tabular}{|l|c|}
+\hline
+\rowcolor{gray!10}
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Training episodes & 2500 \\
+\hline
+Steps per episode & 1600 \\
+\hline
+Warmup steps & 800 \\
+\hline
+Minimum exploration rate & 0.1 \\
+\hline
+Exploration decay rate & 0.995 \\
+\hline
+\end{tabular}
+\end{table}
+
+\section*{Real Time Simulation and Experimental Results}
+
+The offline training was performed with TD3 method and the weights and biases of the trained network were exported and integrated into a Simulink model. The function blocks were created to replicate the neural network architecture and ReLU activation functions. This Simulink model, with the TD3 agent replacing the traditional PI controllers, was then deployed on an OPAL-RT real-time Hardware-in-the-Loop (HIL) platform to validate its performance in controlling the DFIG-PV system under realistic conditions.
+The simulation was also performed for controller trained with DDPG method as in table \ref{tab:learning_params} and the results were then compared with the TD3 method as shown in figures \ref{fig:rotor_current_comparison},\ref{fig:bus_voltage_comparison}.
+
+\subsection*{Simulation Parameters}
+
+The HIL simulation was conducted using the system parameters detailed in Table \ref{tab:sim_params}. The system was subjected to simultaneous abrupt step changes in both solar PV current and wind speed at $t=5$s to measure the controller's dynamic response capabilities. This scenario was designed to test the controller's ability to maintain stability while managing sudden fluctuations from both intermittent energy sources. The specific changes were:
+\begin{enumerate}
+\item Solar PV current step from 0A to 5A.
+\item Wind speed step from 10 m/s to 11.2 m/s.
+\end{enumerate}
+
+\begin{table}[htbp]
+\centering
+\caption{System Simulation Parameters}
+\label{tab:sim_params}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Parameter} & \textbf{Value} & \textbf{Unit} \\
+\hline
+Sampling time & 1 & ms \\
+\hline
+Wind speed range & [6-14] & m/s \\
+\hline
+Solar irradiance range & [200-1000] & W/m² \\
+\hline
+Maximum power point tracking interval & 100 & ms \\
+\hline
+DFIG Power Output & 7.5 & kW \\
+\hline
+Stator Phase Voltage & 415 & V \\
+\hline
+Stator Current & 8 & A \\
+\hline
+Rotor Current & 12 & A \\
+\hline
+DC Link voltage & 230 & V \\
+\hline
+Wind Speed (nominal) & 9 & m/s \\
+\hline
+Solar PV Rated Output & 500 & W \\
+\hline
+Solar PV Open Circuit Voltage (Voc) & 108 & V \\
+\hline
+Solar PV Rated Current & 5 & A \\
+\hline
+Converter Filter Capacitor & 1000 & µF \\
+\hline
+Converter Filter Inductor & 5 & mH \\
+\hline
+\end{tabular}
+\end{table}
+
+Figure \ref{fig:pv_vdc_response} illustrates the system's response to the step change in solar PV current. As observed in the top trace, the TD3 controller maintains exceptionally tight regulation of the DC link voltage ($V_{dc}$) within a narrow band, even during the abrupt 5A injection of current from the PV array. This demonstrates the controller's improved performance, resulting from the state representation and rapid control actuation. The PV current ($I_{solar}$) settles to its new value in under 90 ms with minimal overshoot, showcasing the controller's fast transient response.
+
+\begin{figure*}[h]
+\centering
+\includegraphics[width=0.6\textwidth]{images/Run4_M1_Solar.jpg}
+\caption{Change in Solar PV input and $V_{dc}$}
+\label{fig:pv_vdc_response}
+\end{figure*}
+
+\subsection*{Performance Metrics}
+
+A comparative analysis against a conventionally tuned PI controller and DDPG highlights the improved performance gains achieved with the TD3-based approach \cite{zholtayev2024td3, lee2023td3}. The aggregate performance metrics, summarized in Table \ref{tab:performance_comparison}, demonstrate improved performance of the TD3 controller and a faster response time combined with reduction in power overshoot, DC link voltage.
+
+\begin{table}[htbp]
+\centering
+\caption{Comparative Performance Analysis}
+\label{tab:performance_comparison}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Metric} & \textbf{TD3} & \textbf{DDPG } & \textbf{PI Control} \\
+\hline
+Response Time (ms) & 72 & 80 & 85 \\
+\hline
+Power Overshoot (\%) & 7.0 & 7.2 & 7.8 \\
+\hline
+DC Link Voltage Regulation (\%) & $\pm 4.6$ & $\pm 4.8$ & $\pm 5$ \\
+\hline
+Settling Time (ms) & 98 & 102 & 118 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection*{Controller Dynamic Response Analysis}
+
+The dynamic response characteristics of the TD3 based controller are further examined at the converter level. The TD3 based controller achieves faster rise time, lower overshoot and reduction in settling time for the RSC compared to the PI and DDPG based controller \cite{fujimoto2018td3, kim2020td3} as shown in Table \ref{tab:rsc_performance}. 
+
+\begin{table}[htbp]
+\centering
+\caption{Rotor Side Converter Performance Comparison}
+\label{tab:rsc_performance}
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Controller} & \textbf{Rise Time (ms)} & \textbf{Settling Time (ms)} & \textbf{Overshoot (\%)} \\
+\hline
+PI Controller & 15 & 40 & 5 \\
+\hline
+DDPG Controller & 13 & 36 & 4.6 \\
+\hline
+TD3 Controller & 12 & 34 & 4.4 \\
+\hline
+\end{tabular}
+\end{table}
+
+The comparative performance of TD3 based controller achieving a better DC link voltage regulation at GSC is shown in Table \ref{tab:gsc_performance}. These results demonstrates that a single TD3 based controller effectively  coordinates and optimize the performance of both converters simultaneously.
+
+\begin{table}[htbp]
+\centering
+\caption{Grid Side Converter Performance Comparison}
+\label{tab:gsc_performance}
+\begin{tabular}{|l|c|}
+\hline
+\textbf{Controller} & \textbf{DC Link Regulation} \\
+\hline
+PI Controller & $\pm 5\%$ \\
+\hline
+DDPG Controller & $\pm 4.8\%$ \\
+\hline
+TD3 Controller & $\pm 4.6\%$ \\
+\hline
+\end{tabular}
+\end{table}
+
+
+\begin{figure*}[h]
+\centering
+\begin{subfigure}[t]{0.32\textwidth}
+\centering
+\includegraphics[width=\textwidth]{images/PID_Rotor_current.png}
+\caption{PI Rotor Current response on varying wind and solar inputs}
+\label{fig:rotor_current_pid}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.32\textwidth}
+\centering
+\includegraphics[width=\textwidth]{images/DDPG_Rotor_current.png}
+\caption{DDPG Rotor Current response on varying wind and solar inputs}
+\label{fig:rotor_current_ddpg}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.32\textwidth}
+\centering
+\includegraphics[width=\textwidth]{images/TD3_Rotor_current.png}
+\caption{TD3 Rotor Current response on varying wind and solar inputs}
+\label{fig:rotor_current_td3}
+\end{subfigure}
+\caption{Dynamic Response of Rotor Current to varying Wind and Solar inputs}
+\label{fig:rotor_current_comparison}
+\end{figure*}
+
+
+\begin{figure*}[h]
+\centering
+\begin{subfigure}[t]{0.32\textwidth}
+\centering
+\includegraphics[width=\textwidth]{images/PID_Vdc.png}
+\caption{PI controller}
+\label{fig:bus_voltage_pid}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.32\textwidth}
+\centering
+\includegraphics[width=\textwidth]{images/DDPG_Vdc.png}
+\caption{DDPG controller}
+\label{fig:bus_voltage_ddpg}
+\end{subfigure}
+\hfill
+\begin{subfigure}[t]{0.32\textwidth}
+\centering
+\includegraphics[width=\textwidth]{images/TD3_Vdc.jpg}
+\caption{TD3 controller}
+\label{fig:bus_voltage_td3}
+\end{subfigure}
+\caption{Dynamic Response of Bus voltage to varying wind speed}
+\label{fig:bus_voltage_comparison}
+\end{figure*}
+
+
+\section*{Discussion}
+
+The proposed TD3-based control strategy represents an improvement over both conventional PI controllers and DDPG algorithm controlling power electronic converters in hybrid renewable energy systems \cite{zholtayev2024td3pmsg, liang2024td3}. The experimental results confirm that the theoretical advantages of the TD3 architecture results in  improvement of system performance.
+
+
+
+The TD3 controller achieves a 10.3\% reduction in power overshoot (from 7.8\% to 7.0\%), 8\% improvement in DC link voltage regulation (from $\pm$5\% to $\pm$4.6\%), 15.3\% faster response time (from 85 ms to 72 ms), and 16.9\% faster settling time (from 118 ms to 98 ms) compared to conventional PI control. 
+
+When compared with DDPG based controller, the TD3 based controller shows 2.8\% lower power overshoot, 4.2\% tighter DC link regulation, 10\% faster response time, and 3.9\% faster settling time. At the RSC level, TD3 shows 7.7\% faster rise time, 5.6\% faster settling time, and 4.3\% lower overshoot in rotor current.\\
+These improvements directly demonstrate advantages of TD3 algorithm \cite{zholtayev2024td3pmsg, han2022td3} with the clipped double Q-learning mechanism for overestimation bias mitigation \cite{fujimoto2018td3}. 
+\subsection*{Advantages over DDPG}
+
+
+
+\subsubsection*{Overestimation Bias Mitigation}
+
+The reduction in power overshoot (Table \ref{tab:performance_comparison}) is an  improvement due to clipped double Q-learning mechanism \cite{fujimoto2018td3, zholtayev2024td3}. DDPG's tendency to overestimate Q-values causes its actor to select overly aggressive actions, resulting in significant overshoot and oscillations. By using the minimum of two critic estimates, as shown in eq \eqref{eq:target_value}, TD3 forms a more conservative and accurate value estimate, which yields better control policy. This is evident in the improved response of the TD3 controller in Figure \ref{fig:rotor_current_comparison}.
+
+
+\subsubsection*{Computational Considerations}
+
+The TD3 algorithm is more computationally intensive than DDPG during training, requiring more resources due to the additional critic network. This is a one-time, offline cost. The OPAL-RT HIL experiments prove that the real-time execution of the TD3 policy is feasible on standard control hardware\cite{zholtayev2024td3pmsg}. The slight increase in training time is a trade-off for improved performance.
+
+\section*{Conclusions and Future Scope}
+
+This paper demonstrates a Twin-Delayed Deep Deterministic Policy Gradient (TD3) control framework for hybrid DFIG-Solar PV renewable energy systems. The key contributions of the paper are:
+\begin{itemize}
+    \item It implements a twin actor-critic reinforcement learning architecture that effectively addresses the overestimation bias inherent in single-critic methods, leading to improved control for power electronic converters.
+    \item It implements a single coordinated control strategy for both the RSC and GSC, managing the dynamics of the integrated DFIG-Solar PV system.
+    \item It provides performance validation via OPAL-RT HIL simulation, demonstrating improvements over both conventional PI controllers and the DDPG algorithm.
+\end{itemize}
+
+
+\subsection*{Future Research Scope}
+
+This research can be further extended in the following directions:
+\begin{enumerate}
+    \item \textbf{Scalability and Transferability Approaches:} Future work should investigate Multi-Agent Reinforcement Learning (MARL) frameworks, where each converter or turbine acts as a cooperative agent, to enable decentralized control of entire wind and solar farms \cite{liang2024td3, han2022td3}. Furthermore, exploring meta-learning ("learning to learn") approaches could lead to policies that can rapidly adapt to new turbine models or grid conditions with minimal retraining.
+
+    
+    \item \textbf{Advanced Comparative Studies and Hybrid Architectures:} An exhaustive comparative analysis should be conducted against other state-of-the-art control strategies, including Model Predictive Control (MPC) and other DRL algorithms like Soft Actor-Critic (SAC) \cite{haarnoja2018sac, qiu2023td3improved}. Additionally, investigating hybrid control architectures that combine the adaptive learning of TD3 with the hard stability guarantees of robust baseline controllers like sliding mode control (SMC) could offer the best of both paradigms.
+\end{enumerate}
+
+
+\section*{Funding Statement Declaration}
+
+\textbf{Funding:} No funding
+
+\bibliography{references}
+
+\section*{Acknowledgments}
+
+The authors acknowledge the support provided by the Department of Electrical Engineering, National Institute of Technology Uttarakhand, for providing the necessary facilities to conduct this research.
+
+\section*{Author Contributions Statement}
+
+R.P. and M.A. conceived the experiment and developed the TD3 algorithm implementation. R.P., Y.A., and S.N. conducted the simulation experiments and analyzed the results. P.D. and S.B. provided technical guidance and reviewed the methodology. All authors contributed to writing and reviewing the manuscript.
+
+\section*{Additional Information}
+
+\subsubsection*{Competing interests:} The authors declare no competing interests.
+
+\subsubsection*{Data availability:} All data generated or analysed during this study are included in this published article [and its supplementary information files].
+
+\end{document}

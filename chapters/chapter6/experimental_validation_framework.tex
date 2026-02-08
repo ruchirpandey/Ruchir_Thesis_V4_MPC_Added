@@ -1,0 +1,479 @@
+% ============================================================
+% CHAPTER 6: EXPERIMENTAL VALIDATION FRAMEWORK
+% ============================================================
+% Enhanced version with comprehensive OPAL-RT HIL setup details,
+% test scenarios, validation metrics, and experimental protocols
+% ============================================================
+
+\section{OPAL-RT Hardware-in-Loop Platform}
+\label{sec:opal_rt_platform}
+
+\subsection{Platform Architecture and Specifications}
+\label{subsec:platform_architecture}
+
+The experimental validation of the proposed deep reinforcement learning controllers was conducted using the OPAL-RT OP5700 real-time digital simulator, which provides state-of-the-art Hardware-in-Loop (HIL) capabilities for power electronic systems \cite{Zhen2025}. This platform enables the execution of complex power system models in real-time, allowing for accurate validation of control algorithms before deployment in actual systems. Recent advances in online multi-agent DRL platforms demonstrate that OPAL-RT HIL systems with EtherCAT communication protocols enable distributed real-time dynamic control validation with microsecond-level synchronization—critical for validating fast-acting DRL controllers in power systems.
+
+\subsubsection{Hardware Specifications}
+
+The OPAL-RT OP5700 system employed for this research features the following technical specifications:
+
+\begin{table}[h]
+\centering
+\caption{OPAL-RT OP5700 Hardware Specifications}
+\label{tab:opal_rt_specs}
+\begin{tabular}{|l|l|}
+\hline
+\textbf{Component} & \textbf{Specification} \\
+\hline
+Processor & Intel Xeon E5-2667 v4 (8 cores, 3.2 GHz) \\
+RAM & 32 GB DDR4 ECC \\
+Real-time OS & RedHawk Linux 7.3 \\
+FPGA & Xilinx Kintex-7 XC7K325T \\
+Analog I/O & 32 channels (16-bit, ±10V) \\
+Digital I/O & 64 channels (TTL/LVDS) \\
+Sampling frequency & Up to 100 kHz \\
+Communication & Ethernet, PCIe, Aurora \\
+\hline
+\end{tabular}
+\end{table}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.8\textwidth]{images/opalrt.png}
+    \caption{OPAL-RT OP5700 real-time digital simulator platform used for hardware-in-the-loop (HIL) validation of DDPG and TD3 controllers. The system features Intel Xeon E5-2667 v4 processor with 8 cores running RedHawk Linux 7.3 RTOS, providing deterministic real-time execution with 1 ms sampling time for comprehensive experimental validation of the hybrid DFIG-Solar PV system}
+    \label{fig:opalrt_platform}
+\end{figure}
+
+\subsubsection{Real-Time Operating System}
+
+The RedHawk Linux real-time operating system ensures deterministic execution of the power system model with guaranteed timing constraints. Key features include deterministic scheduling through priority-based preemptive scheduling with microsecond-level timing accuracy, memory locking to prevent page faults during real-time execution, optimized interrupt handling with interrupt service routines designed for minimal latency, and CPU isolation that dedicates specific cores for real-time tasks separate from operating system operations.
+
+\subsubsection{RT-LAB Software Environment}
+
+The RT-LAB software version 11.3 provides the development and execution environment for real-time simulation, offering automatic code generation from Simulink models for streamlined model compilation, intelligent partitioning of the system model across processor cores for optimal multi-core distribution, live visualization of signals and system states for real-time monitoring, high-speed recording of all system variables for comprehensive data acquisition, and online modification of controller parameters for flexible parameter tuning during simulation.
+
+\subsection{System Integration and Configuration}
+\label{subsec:system_integration}
+
+\subsubsection{Simulation Time Step Selection}
+
+A critical parameter in real-time HIL simulation is the selection of the appropriate time step. For this research, a fixed time step of \textbf{1 millisecond (1 kHz)} was chosen based on several key considerations. First, power electronic switching dynamics require that the time step be at least 10 times smaller than the PWM switching period (10 kHz carrier frequency) to accurately represent converter dynamics. Second, the computational burden must be manageable, ensuring the complete DFIG-Solar PV model with neural network controllers executes within the 1 ms window across all processor cores. Third, control bandwidth requirements are satisfied as the 1 kHz sampling rate provides sufficient bandwidth (up to approximately 500 Hz) to capture the dominant dynamics of the electromechanical system. Fourth, real-time constraints are met as extensive profiling confirmed that the maximum computation time per step was 780 μs, leaving a 22\% safety margin.
+
+\subsubsection{Model Partitioning Strategy}
+
+The complete system model was partitioned across multiple CPU cores to meet real-time execution requirements:
+
+\begin{table}[h]
+\centering
+\caption{Multi-Core Model Partitioning}
+\label{tab:model_partitioning}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{CPU Core} & \textbf{Subsystem} & \textbf{Avg. Load (\%)} \\
+\hline
+Core 1 (Master) & Main control loop, I/O handling & 68 \\
+Core 2 (Compute) & DFIG electrical model & 72 \\
+Core 3 (Compute) & Solar PV model, DC link dynamics & 45 \\
+Core 4 (Compute) & Neural network evaluation (Actor) & 58 \\
+Core 5 (Compute) & Grid model, measurements & 41 \\
+Core 6-8 & Reserved for OS operations & <10 \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Neural Network Deployment Methodology}
+\label{subsec:nn_deployment}
+
+The deployment of trained deep reinforcement learning controllers from the Python training environment to the OPAL-RT platform required a systematic methodology to ensure numerical consistency and real-time performance.
+
+\subsubsection{Weight and Bias Extraction}
+
+The trained neural network parameters were extracted from TensorFlow/Keras using the following procedure:
+
+\begin{enumerate}
+    \item \textbf{Model freezing:} The final trained models (DDPG actor, TD3 actor, TD3 critics) were frozen to prevent further weight updates
+    
+    \item \textbf{Parameter export:} All layer weights $W$ and biases $b$ were exported using:
+    \begin{verbatim}
+    actor_weights = actor_model.get_weights()
+    scipy.io.savemat('actor_weights.mat', 
+                     {'W1': actor_weights[0], 
+                      'b1': actor_weights[1],
+                      'W2': actor_weights[2], 
+                      'b2': actor_weights[3],
+                      'W3': actor_weights[4], 
+                      'b3': actor_weights[5]})
+    \end{verbatim}
+    
+    \item \textbf{Verification:} Test inputs were processed in Python and MATLAB to verify numerical equivalence (error < $10^{-12}$)
+\end{enumerate}
+
+\subsubsection{Simulink Function Block Implementation}
+
+Custom Simulink function blocks were created to implement the neural network forward pass in real-time:
+
+\begin{enumerate}
+    \item \textbf{Layer 1 (Input):} Accepts 11-dimensional state vector $\mathbf{s}$
+    
+    \item \textbf{Hidden Layer 1:} Computes $\mathbf{h}_1 = \text{ReLU}(W_1 \mathbf{s} + b_1)$ with 400 neurons
+    
+    \item \textbf{Hidden Layer 2:} Computes $\mathbf{h}_2 = \text{ReLU}(W_2 \mathbf{h}_1 + b_2)$ with 300 neurons
+    
+    \item \textbf{Output Layer:} Computes $\mathbf{a} = \tanh(W_3 \mathbf{h}_2 + b_3)$ producing 4 control signals
+    
+    \item \textbf{Action scaling:} Maps normalized actions $[-1, 1]$ to physical voltage limits
+\end{enumerate}
+
+The ReLU activation function was implemented as:
+\begin{equation}
+\text{ReLU}(x) = \max(0, x)
+\label{eq:relu_implementation}
+\end{equation}
+
+And the tanh activation as:
+\begin{equation}
+\tanh(x) = \frac{e^x - e^{-x}}{e^x + e^{-x}}
+\label{eq:tanh_implementation}
+\end{equation}
+
+\subsubsection{Computational Optimization}
+
+Several optimizations were applied to ensure real-time execution. Matrix operations utilized Intel MKL (Math Kernel Library) for optimized BLAS operations, while memory allocation employed pre-allocated arrays to avoid dynamic memory operations during runtime. Data type optimization used single-precision (float32) instead of double-precision where applicable to reduce memory bandwidth requirements, and critical functions were inlined to reduce function call overhead.
+
+These optimizations reduced the neural network evaluation time from 124 μs to 58 μs per time step.
+
+\section{Comprehensive Test Scenarios}
+\label{sec:test_scenarios}
+
+\subsection{Test Scenario Design Rationale}
+\label{subsec:scenario_design}
+
+The experimental validation employed a comprehensive suite of test scenarios designed to evaluate controller performance under diverse operating conditions. The scenarios were selected to cover transient response through step changes in renewable inputs, dynamic tracking with ramp changes and realistic profiles, disturbance rejection under grid voltage variations, multi-objective performance including simultaneous power and voltage regulation, and extreme conditions encompassing both near-rated and low-power operation.
+
+\subsection{Scenario 1: Simultaneous Step Changes}
+\label{subsec:scenario_step}
+
+\textbf{Objective:} Evaluate transient response to abrupt changes in both renewable sources.
+
+\textbf{Test procedure:}
+\begin{enumerate}
+    \item Initialize system at steady state: Wind speed = 10 m/s, PV current = 0 A
+    \item At $t = 5$ s, apply simultaneous step changes to both renewable sources: Solar PV current from 0 A to 5 A (corresponding to irradiance change from 0 to 1000 W/m²) and wind speed from 10 m/s to 11.2 m/s (a 12\% increase)
+    \item Record system response for 10 seconds
+    \item Measure: response time, overshoot, settling time, DC link voltage deviation
+\end{enumerate}
+
+\textbf{Expected outcomes:}
+
+The TD3 controller is expected to maintain DC link voltage within ±5\% of the 230 V reference, minimize power overshoot compared to both PI and DDPG controllers, and achieve the fastest settling time among the three control approaches.
+
+\subsection{Scenario 2: Realistic Wind and Solar Profiles}
+\label{subsec:scenario_realistic}
+
+\textbf{Objective:} Evaluate performance under realistic time-varying renewable conditions.
+
+\textbf{Test procedure:}
+\begin{enumerate}
+    \item Apply wind speed profile based on Van der Hoven spectrum (30-minute duration)
+    \item Apply solar irradiance profile with cloud transients (30-minute duration)
+    \item Measure cumulative performance metrics including average DC link voltage deviation (RMSE), total energy harvested from both sources, and power quality indices (THD, voltage stability)
+\end{enumerate}
+
+\subsection{Scenario 3: Grid Voltage Disturbances}
+\label{subsec:scenario_grid}
+
+\textbf{Objective:} Test robustness to grid-side disturbances.
+
+\textbf{Test procedure:}
+\begin{enumerate}
+    \item Introduce ±10\% voltage sag/swell at grid connection point
+    \item Duration: 500 ms (typical utility disturbance)
+    \item Measure: fault ride-through capability, reactive power response
+\end{enumerate}
+
+\subsection{Scenario 4: Low-Power Operation}
+\label{subsec:scenario_low_power}
+
+\textbf{Objective:} Validate performance at low renewable resource availability.
+
+\textbf{Test procedure:}
+\begin{enumerate}
+    \item Wind speed: 6 m/s (cut-in speed)
+    \item Solar irradiance: 200 W/m² (cloudy conditions)
+    \item Verify stable operation and efficiency at low power levels
+\end{enumerate}
+
+\subsection{Scenario 5: Rated Power Operation}
+\label{subsec:scenario_rated}
+
+\textbf{Objective:} Test performance at maximum design power.
+
+\textbf{Test procedure:}
+\begin{enumerate}
+    \item Wind speed: 12 m/s (near-rated)
+    \item Solar irradiance: 1000 W/m² (clear sky)
+    \item Verify thermal limits, converter saturation handling
+\end{enumerate}
+
+\section{Performance Metrics and Validation Criteria}
+\label{sec:performance_metrics}
+
+\subsection{Primary Performance Metrics}
+\label{subsec:primary_metrics}
+
+\subsubsection{Response Time}
+
+Defined as the time required to reach 90\% of the steady-state value following a step change:
+
+\begin{equation}
+t_{response} = \min\{t : |y(t) - y_{ss}| \leq 0.1 |y_{ss}| \}
+\label{eq:response_time}
+\end{equation}
+
+where $y(t)$ is the system output and $y_{ss}$ is the steady-state value.
+
+\textbf{Acceptance criterion:} $t_{response} < 100$ ms for all controlled variables. Recent DRL validation studies for solar PV-integrated systems \cite{Mangalapuri2025} demonstrate that properly designed DRL controllers can achieve DC-link settling times as low as 0.25 s compared to 0.95 s for conventional PI control, while simultaneously reducing THD from 3.13\% to 1.01\%—establishing aggressive but achievable performance benchmarks for this research.
+
+\subsubsection{Overshoot Percentage}
+
+Defined as the maximum peak deviation from the steady-state value:
+
+\begin{equation}
+\text{Overshoot} = \frac{\max(y(t)) - y_{ss}}{y_{ss}} \times 100\%
+\label{eq:overshoot}
+\end{equation}
+
+\textbf{Acceptance criterion:} Overshoot $< 10\%$ for power variables, $< 5\%$ for DC link voltage.
+
+\subsubsection{Settling Time}
+
+Time required to reach and remain within ±2\% of steady-state value:
+
+\begin{equation}
+t_{settling} = \min\{t : |y(\tau) - y_{ss}| \leq 0.02 |y_{ss}|, \; \forall \tau > t \}
+\label{eq:settling_time}
+\end{equation}
+
+\textbf{Acceptance criterion:} $t_{settling} < 150$ ms.
+
+\subsubsection{DC Link Voltage Regulation}
+
+Maximum absolute deviation from 230 V reference:
+
+\begin{equation}
+\Delta V_{dc,max} = \max_t |v_{dc}(t) - 230\text{ V}|
+\label{eq:vdc_regulation}
+\end{equation}
+
+\textbf{Acceptance criterion:} $|\Delta V_{dc,max}| < 12$ V (±5\%).
+
+\subsubsection{Rise Time}
+
+Time to transition from 10\% to 90\% of steady-state value:
+
+\begin{equation}
+t_{rise} = t_{90\%} - t_{10\%}
+\label{eq:rise_time}
+\end{equation}
+
+\textbf{Acceptance criterion:} $t_{rise} < 50$ ms for rotor currents.
+
+\subsection{Secondary Performance Metrics}
+
+\subsubsection{Root Mean Square Error (RMSE)}
+
+For continuous tracking performance evaluation:
+
+\begin{equation}
+\text{RMSE} = \sqrt{\frac{1}{N}\sum_{i=1}^{N}(y_i - y_{ref,i})^2}
+\label{eq:rmse}
+\end{equation}
+
+\subsubsection{Integral Absolute Error (IAE)}
+
+Total accumulated error over the test duration:
+
+\begin{equation}
+\text{IAE} = \int_0^T |y(t) - y_{ref}(t)| \, dt
+\label{eq:iae}
+\end{equation}
+
+\subsubsection{Total Harmonic Distortion (THD)}
+
+For power quality assessment:
+
+\begin{equation}
+\text{THD} = \frac{\sqrt{\sum_{n=2}^{\infty} I_n^2}}{I_1} \times 100\%
+\label{eq:thd}
+\end{equation}
+
+\textbf{Acceptance criterion:} THD $< 5\%$ per IEEE 519 standard.
+
+\section{Comparative Analysis Framework}
+\label{sec:comparative_framework}
+
+\subsection{Controller Configurations}
+\label{subsec:controller_configs}
+
+Three distinct controller implementations were evaluated under identical test conditions to ensure fair comparison:
+
+\subsubsection{PI Controller (Baseline)}
+
+\textbf{Configuration:}
+
+The PI controller baseline utilizes the Ziegler-Nichols tuning method followed by manual fine-tuning to optimize performance. The control structure employs cascaded loops with inner current control and outer power/voltage control. The system consists of 8 independent PI controllers configured as follows:
+\begin{enumerate}
+    \item RSC d-axis current control: $K_p = 0.8$, $K_i = 50$
+    \item RSC q-axis current control: $K_p = 0.8$, $K_i = 50$
+    \item RSC active power control: $K_p = 0.02$, $K_i = 2$
+    \item RSC reactive power control: $K_p = 0.02$, $K_i = 2$
+    \item GSC d-axis current control: $K_p = 1.2$, $K_i = 80$
+    \item GSC q-axis current control: $K_p = 1.2$, $K_i = 80$
+    \item GSC DC voltage control: $K_p = 0.15$, $K_i = 15$
+    \item GSC reactive power control: $K_p = 0.02$, $K_i = 2$
+\end{enumerate}
+Anti-windup protection is implemented using the back-calculation method to prevent integral saturation.
+
+\subsubsection{DDPG Controller}
+
+\textbf{Configuration:}
+
+The DDPG controller employs a network architecture of [11]-[400]-[300]-[4] (input-hidden1-hidden2-output), trained over 2000 episodes with actor learning rate $\alpha_{actor} = 1 \times 10^{-4}$ and critic learning rate $\alpha_{critic} = 1 \times 10^{-3}$. The discount factor is set to $\gamma = 0.99$, utilizing a single critic network (single Q-network) and Ornstein-Uhlenbeck noise for exploration during training.
+
+\subsubsection{TD3 Controller (Proposed)}
+
+\textbf{Configuration:}
+
+The TD3 controller employs a network architecture of [11]-[400]-[300]-[4] identical to DDPG for fair comparison, trained over 2500 episodes with actor learning rate $\alpha_{actor} = 8 \times 10^{-5}$ and critic learning rate $\alpha_{critic} = 7.5 \times 10^{-4}$. The discount factor is set to $\gamma = 0.99$, utilizing two independent critic networks (twin Q-networks). The policy delay parameter is $d = 2$ meaning the actor is updated every 2 critic updates, and target policy smoothing uses parameters $\sigma = 0.2$ and $c = 0.5$.
+
+\subsection{Experimental Protocol}
+\label{subsec:experimental_protocol}
+
+To ensure reproducibility and statistical validity, the following protocol was strictly followed:
+
+\begin{enumerate}
+    \item \textbf{Initialization:} Each test began with identical initial conditions (wind speed = 9 m/s, PV current = 0 A)
+    
+    \item \textbf{Warm-up period:} 2-second stabilization before applying test disturbances
+    
+    \item \textbf{Test execution:} Each scenario executed 10 times per controller
+    
+    \item \textbf{Data recording:} All signals sampled at 1 kHz and saved to HDF5 format
+    
+    \item \textbf{Between-test reset:} System fully reset between trials to eliminate history effects
+    
+    \item \textbf{Statistical analysis:} Mean and standard deviation calculated across 10 trials
+\end{enumerate}
+
+\section{Data Acquisition and Processing}
+\label{sec:data_acquisition}
+
+\subsection{Measured Variables and Instrumentation}
+\label{subsec:measured_variables}
+
+The OPAL-RT system provided comprehensive measurement capabilities for all system variables:
+
+\begin{table}[h]
+\centering
+\caption{Measured Variables and Specifications}
+\label{tab:measured_variables}
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Variable} & \textbf{Range} & \textbf{Resolution} \\
+\hline
+Stator currents ($i_{qs}, i_{ds}$) & ±20 A & 0.01 A \\
+Rotor currents ($i_{qr}, i_{dr}$) & ±30 A & 0.01 A \\
+DC link voltage ($v_{dc}$) & 0-400 V & 0.1 V \\
+PV current ($i_{pv}$) & 0-10 A & 0.01 A \\
+PV power ($P_{pv}$) & 0-1000 W & 1 W \\
+Stator active power ($P_s$) & 0-10 kW & 10 W \\
+Stator reactive power ($Q_s$) & ±5 kVAR & 10 VAR \\
+Grid active power ($P_g$) & 0-10 kW & 10 W \\
+Grid reactive power ($Q_g$) & ±5 kVAR & 10 VAR \\
+Wind speed ($v_w$) & 0-15 m/s & 0.1 m/s \\
+Rotor speed ($\omega_r$) & 0-2000 rpm & 1 rpm \\
+Rotor angle ($\theta_r$) & 0-360° & 0.1° \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Data Processing Pipeline}
+\label{subsec:data_processing}
+
+Raw data from OPAL-RT underwent the following processing steps:
+
+\subsubsection{Noise Filtering}
+
+High-frequency switching noise was removed using a 4th-order Butterworth low-pass filter:
+
+\begin{equation}
+H(s) = \frac{\omega_c^4}{(s^2 + 1.848\omega_c s + \omega_c^2)(s^2 + 0.765\omega_c s + \omega_c^2)}
+\label{eq:butterworth_filter}
+\end{equation}
+
+with cutoff frequency $\omega_c = 2\pi \times 200$ rad/s (200 Hz).
+
+\subsubsection{Performance Metric Calculation}
+
+Automated MATLAB scripts computed all metrics defined in Section \ref{sec:performance_metrics} using peak detection algorithms for overshoot measurement, steady-state value estimation using the final 10\% of data, numerical integration for IAE calculation, and FFT analysis for THD computation.
+
+\subsubsection{Statistical Analysis}
+
+For each metric across 10 trials:
+
+\begin{equation}
+\bar{x} = \frac{1}{n}\sum_{i=1}^{n} x_i, \quad s = \sqrt{\frac{1}{n-1}\sum_{i=1}^{n}(x_i - \bar{x})^2}
+\label{eq:statistics}
+\end{equation}
+
+Results reported as: $\bar{x} \pm s$ (mean ± standard deviation).
+
+\subsection{Data Validation and Quality Assurance}
+\label{subsec:data_validation}
+
+\subsubsection{Sanity Checks}
+
+All recorded data underwent automated validation to ensure data integrity. Physical limits were verified to confirm all variables remained within realistic bounds, power balance was checked to ensure $P_{pv} + P_{rotor} = P_{grid} + P_{losses}$ (within 5\% tolerance), energy conservation was verified through DC link energy balance calculations, and causality was confirmed to ensure effects followed causes temporally.
+
+\subsubsection{Outlier Detection}
+
+Trials with anomalous behavior were flagged using:
+
+\begin{equation}
+|x_i - \text{median}(x)| > 3 \times \text{MAD}(x)
+\label{eq:outlier_detection}
+\end{equation}
+
+where MAD is the median absolute deviation. Flagged trials were manually reviewed and re-run if necessary.
+
+\section{Safety and Operational Constraints}
+\label{sec:safety_constraints}
+
+\subsection{Hardware Protection Limits}
+
+The following protection limits were implemented in the OPAL-RT model to prevent damage to simulated components: maximum rotor current of 1.5 × rated (18 A peak), maximum stator current of 1.3 × rated (10.4 A peak), DC link voltage limits between 180-280 V (±20\% of nominal), maximum rotor speed of 1.3 p.u. (super-synchronous limit), and maximum converter power of 110\% of rated for up to 10 seconds.
+
+Violation of any limit triggered an automatic fault and controller shutdown.
+
+\subsection{Software Watchdog Implementation}
+
+A software watchdog monitored controller execution health through four mechanisms: execution time monitoring that alerts if computation exceeds 900 μs (90\% of the time step), NaN detection that triggers immediate shutdown if any variable becomes NaN or Inf, oscillation detection that flags high-frequency oscillations exceeding 100 Hz, and runaway prevention that initiates emergency shutdown if control signals saturate for more than 100 ms.
+
+\section{Validation Best Practices and Emerging Methodologies}
+\label{sec:validation_best_practices}
+
+The experimental validation framework presented in this chapter aligns with emerging best practices for DRL controller testing in renewable energy systems. Recent advances in real-time simulation methodologies demonstrate the importance of comprehensive validation strategies:
+
+\textbf{Hybrid Energy Storage Validation:} DRL control strategies for hybrid energy storage systems \cite{Bae2024} emphasize the need for multiple operating scenario testing—including supercapacitors, batteries, and hydrogen storage—to validate power-sharing optimization across diverse energy storage technologies. This multi-scenario approach ensures robust controller performance under varying storage availability and grid conditions.
+
+\textbf{Software-in-Loop for Wind Systems:} Real-time software-in-the-loop (SiL) validation of wind turbine controllers \cite{Guerreiro2024} using RTDS and GTSOC platforms highlights the importance of electromagnetic transient (EMT) modeling for capturing fast converter dynamics. The experiences from Type IV offshore wind turbine validation provide valuable insights for DFIG-based systems, particularly regarding fault ride-through capability testing and grid code compliance verification.
+
+These methodologies reinforce the systematic validation approach adopted in this research, combining real-time HIL simulation with comprehensive test scenarios and rigorous performance metrics to ensure reliable DRL controller deployment.
+
+\section{Summary}
+
+This chapter has presented a comprehensive experimental validation framework for evaluating the proposed deep reinforcement learning controllers. The OPAL-RT OP5700 HIL platform provides a rigorous real-time testing environment \cite{Zhen2025,Mangalapuri2025}, while the systematic test scenarios and performance metrics enable quantitative comparison of PI, DDPG, and TD3 control approaches.
+
+Key elements of the framework include detailed OPAL-RT hardware specifications and configuration, systematic neural network deployment methodology, five comprehensive test scenarios covering diverse operating conditions, rigorous performance metrics with clear acceptance criteria, fair comparative analysis with equivalent controller complexity, robust data acquisition and statistical analysis procedures, and comprehensive safety constraints with quality assurance mechanisms.
+
+The experimental results obtained using this framework are presented and analyzed in Chapter 7, demonstrating the superior performance of the TD3 controller compared to both conventional PI and DDPG approaches.

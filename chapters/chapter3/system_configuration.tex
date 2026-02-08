@@ -1,0 +1,183 @@
+\section{System Architecture}
+
+\subsection{Overall Configuration}
+
+The hybrid system consists of a DFIG-based wind turbine with its stator connected to the grid and a back-to-back converter at its rotor. A solar PV array is integrated at the common DC link between the RSC and GSC (Figure~\ref{fig:system_architecture}).
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/Updated_DFIG_Topology.png}
+    \caption{System architecture of DFIG-Solar PV hybrid system with DDPG-based unified controller showing rotor side converter (RSC), grid side converter (GSC), and solar PV integration at DC link}
+    \label{fig:system_architecture}
+\end{figure}
+
+The advanced control configuration with TD3-based controller is shown in Figure~\ref{fig:td3_system_architecture}, which illustrates the twin-delayed deep deterministic policy gradient approach for enhanced power optimization.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.9\textwidth]{images/dpfig_mod.drawio.png}
+    \caption{TD3-based system architecture with twin critic networks for improved stability and overestimation bias mitigation in DFIG-Solar PV hybrid system}
+    \label{fig:td3_system_architecture}
+\end{figure}
+
+\textbf{Key Components:} The system comprises five main components. The DFIG wind turbine converts mechanical wind energy to electrical energy, while the Rotor Side Converter (RSC) controls rotor currents and electromagnetic torque. The Grid Side Converter (GSC) regulates DC link voltage and manages grid power exchange, and the Solar PV array injects variable DC current based on solar irradiation. The DC link capacitor provides an energy buffer between the converters.
+
+This topology eliminates the need for separate DC-DC boost converters and inverters for the PV system, reducing system complexity and cost.
+
+\section{DFIG Mathematical Model}
+
+\subsection{Synchronously Rotating Reference Frame}
+
+The dynamic behavior of the DFIG is modeled in a synchronously rotating direct-quadrature ($d$-$q$) reference frame. This transformation converts three-phase AC machine dynamics into more tractable DC-like quantities in steady state. Recent work by \cite{Loulijat2024} demonstrates the effectiveness of novel power state models for DFIG control, while \cite{Salman2025} provides comprehensive analysis of DFIG-based hybrid solar-wind system optimization using advanced mathematical models.
+
+\subsection{Voltage Equations}
+
+The voltage equations for the DFIG in the $d$-$q$ frame are:
+
+\textbf{Stator Voltage Equations:}
+\begin{align}
+V_{qs} &= R_s i_{qs} + \frac{d\psi_{qs}}{dt} + \omega_s \psi_{ds} \label{eq:vqs} \\
+V_{ds} &= R_s i_{ds} + \frac{d\psi_{ds}}{dt} - \omega_s \psi_{qs} \label{eq:vds}
+\end{align}
+
+\textbf{Rotor Voltage Equations:}
+\begin{align}
+V_{qr} &= R_r i_{qr} + \frac{d\psi_{qr}}{dt} + (\omega_s - \omega_r) \psi_{dr} \label{eq:vqr} \\
+V_{dr} &= R_r i_{dr} + \frac{d\psi_{dr}}{dt} - (\omega_s - \omega_r) \psi_{qr} \label{eq:vdr}
+\end{align}
+
+\subsection{Flux Linkage Equations}
+
+The flux linkages are expressed as:
+\begin{align}
+\psi_{qs} &= L_s i_{qs} + L_m i_{qr} \\
+\psi_{ds} &= L_s i_{ds} + L_m i_{dr} \\
+\psi_{qr} &= L_r i_{qr} + L_m i_{qs} \\
+\psi_{dr} &= L_r i_{dr} + L_m i_{ds}
+\end{align}
+
+\subsection{Power Equations}
+
+The active and reactive power at the stator terminals are:
+\begin{align}
+P_s &= \frac{3}{2}(v_{ds} i_{ds} + v_{qs} i_{qs}) \\
+Q_s &= \frac{3}{2}(v_{qs} i_{ds} - v_{ds} i_{qs})
+\end{align}
+
+\subsection{Simplified State-Space Model}
+
+For control design, simplified current dynamics are derived:
+\begin{align}
+\dot{i}_{qs} &= \frac{\omega_b}{L'_s}\left[-R_1 i_{qs} + \omega_s L'_s i_{ds} + \frac{\omega_r}{\omega_s} e'_{qs} - \frac{1}{T_r \omega_s} e'_{ds} - v_{qs} + \frac{L_m}{L_{rr}} v_{qr}\right] \\
+\dot{i}_{ds} &= \frac{\omega_b}{L'_s}\left[-\omega_s L'_s i_{qs} - R_1 i_{ds} + \frac{1}{T_r \omega_s} e'_{qs} + \frac{\omega_r}{\omega_s} e'_{ds} - v_{ds} + \frac{L_m}{L_{rr}} v_{dr}\right]
+\end{align}
+where $L'_s = L_s - \frac{L_m^2}{L_r}$ is transient stator inductance and $R_1 = R_s + \frac{L_m^2}{L_r^2} R_r$.
+
+\subsection{Mechanical Dynamics}
+
+The rotor speed dynamics are governed by:
+\begin{equation}
+\dot{\omega}_r = \frac{1}{J}(T_m - T_e - B\omega_r)
+\end{equation}
+where $J$ is moment of inertia, $T_m$ is mechanical torque, $T_e$ is electromagnetic torque, and $B$ is friction coefficient.
+
+\section{Solar PV Array Modeling}
+
+\subsection{Single-Diode Equivalent Circuit}
+
+The solar PV array is represented using the single-diode equivalent circuit model \cite{Celik2025}:
+\begin{equation}
+I = I_{ph} - I_s\left(e^{\frac{V + IR_{s,pv}}{n_s V_t}} - 1\right) - \frac{V + IR_{s,pv}}{R_p}
+\label{eq:pv_model}
+\end{equation}
+where $I_{ph}$ is the photocurrent proportional to solar irradiance, $I_s$ is the reverse saturation current, $R_{s,pv}$ is the series resistance, $R_p$ is the parallel (shunt) resistance, $n_s$ is the number of cells in series, and $V_t = \frac{kT}{q}$ is the thermal voltage.
+
+Accurate parameter extraction is critical for PV system modeling. Recent advances include hybrid optimization approaches \cite{Abdulrazzaq2025} combining genetic algorithms and particle swarm optimization, enhanced generalized normal distribution optimization \cite{Ghetas2024}, and prairie dog optimization algorithms \cite{Izci2024}, all demonstrating superior accuracy compared to conventional methods. For hybrid PV systems with adaptive control, AI-based approaches \cite{Mamodiya2025} offer significant potential for enhanced performance.
+
+\subsection{Irradiance and Temperature Dependence}
+
+The photocurrent varies with solar irradiance $G$ and cell temperature $T$:
+\begin{equation}
+I_{ph} = \left[I_{ph,ref} + \alpha_I (T - T_{ref})\right] \frac{G}{G_{ref}}
+\end{equation}
+
+\section{DC Link Dynamics}
+
+\subsection{Power Balance Equation}
+
+The DC link voltage dynamics are governed by power balance \cite{AlWesabi2024,Slimene2025}:
+\begin{equation}
+C \frac{dv_{dc}}{dt} = i_{pv} + i_{r,dc} - i_{g,dc}
+\label{eq:dc_link}
+\end{equation}
+
+Fast and accurate DC-link voltage control is critical for stable operation of hybrid renewable energy systems. Recent work demonstrates that linear active disturbance rejection control (ADRC) combined with hybrid optimization algorithms can achieve superior performance \cite{AlWesabi2024}, with response times significantly faster than conventional PI control. Advanced control strategies for DC-link stabilization in hybrid systems \cite{Slimene2025} show promise for improved grid stability and power quality under varying renewable generation conditions.
+
+\subsection{Converter DC Currents}
+
+The DC currents from the converters depend on their respective AC side power flows:
+\begin{align}
+i_{r,dc} &= \frac{P_{RSC}}{v_{dc}} = \frac{3}{2v_{dc}}(v_{dr} i_{dr} + v_{qr} i_{qr}) \\
+i_{g,dc} &= \frac{P_{GSC}}{v_{dc}} = \frac{3}{2v_{dc}}(v_{gd} i_{gd} + v_{gq} i_{gq})
+\end{align}
+
+\section{Grid Side Converter Model}
+
+The GSC connects the DC link to the grid through an RL filter:
+\begin{align}
+v_{gd} &= R_g i_{gd} + L_g \frac{di_{gd}}{dt} - \omega_s L_g i_{gq} + e_{gd} \\
+v_{gq} &= R_g i_{gq} + L_g \frac{di_{gq}}{dt} + \omega_s L_g i_{gd} + e_{gq}
+\end{align}
+
+Grid-side active and reactive power:
+\begin{align}
+P_g &= \frac{3}{2}(e_{gd} i_{gd} + e_{gq} i_{gq}) \\
+Q_g &= \frac{3}{2}(e_{gq} i_{gd} - e_{gd} i_{gq})
+\end{align}
+
+\section{Complete System State-Space Model}
+
+\subsection{State Vector Definition}
+
+The complete 11-dimensional state vector is:
+\begin{equation}
+\mathbf{s} = [i_{qs}, i_{ds}, i_{qr}, i_{dr}, v_{dc}, i_{pv}, P_s, Q_s, P_g, Q_g, \theta_r]^T
+\label{eq:state_vector}
+\end{equation}
+
+\subsection{System Dynamics}
+
+The system dynamics are:
+\begin{equation}
+\dot{\mathbf{s}} = f(\mathbf{s}, \mathbf{a})
+\end{equation}
+where $\mathbf{a} = [v_{qr}, v_{dr}, v_{qg}, v_{dg}]^T$ is the control action vector.
+
+\section{System Parameters}
+
+The simulation parameters are listed in Table~\ref{tab:system_params}.
+
+\begin{table}[htbp]
+\centering
+\caption{System simulation parameters}
+\label{tab:system_params}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Parameter} & \textbf{Value} & \textbf{Unit} \\
+\midrule
+DFIG rated power & 7.5 & kW \\
+Stator voltage & 415 & V \\
+Stator current & 8 & A \\
+Rotor current & 12 & A \\
+DC link voltage & 230 & V \\
+DC link capacitance & 1000 & $\mu$F \\
+Nominal wind speed & 9 & m/s \\
+Solar PV rated power & 500 & W \\
+PV open circuit voltage & 108 & V \\
+PV rated current & 5 & A \\
+Filter inductance & 5 & mH \\
+Filter capacitance & 1000 & $\mu$F \\
+Sampling time & 1 & ms \\
+\bottomrule
+\end{tabular}
+\end{table}
